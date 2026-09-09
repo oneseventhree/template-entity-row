@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0-beta.2
+## 2.0.0-beta.3
 
 - Add a visual dashboard editor through `getConfigElement()`.
 - Fix templated custom icons, including custom icon sets such as `phu:`.
@@ -12,3 +12,5 @@
 - Add an automated GitHub build check.
 - Add HACS repository validation.
 - Hide the legacy default branch from HACS version selection.
+- Prevent raw Jinja templates from appearing while rows initialize.
+- Subscribe to each row's templates concurrently to reduce dashboard load time.

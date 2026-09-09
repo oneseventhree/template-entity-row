@@ -54,6 +54,21 @@ function normaliseValue(key: string, value: unknown, hass: any): unknown {
   return TRIMMED_OPTIONS.has(key) ? translated.trim() : translated;
 }
 
+function initialRenderedConfig(
+  config: Record<string, any>
+): Record<string, any> {
+  const rendered = { ...config };
+  for (const key of OPTIONS) {
+    if (hasTemplate(config[key])) {
+      delete rendered[key];
+    }
+  }
+  if (hasTemplate(config.condition)) {
+    rendered.condition = false;
+  }
+  return rendered;
+}
+
 class TemplateEntityRow extends LitElement {
   @property({ attribute: false }) hass: any;
   @state() private _sourceConfig: Record<string, any> = {};
@@ -74,7 +89,7 @@ class TemplateEntityRow extends LitElement {
       throw new Error("Invalid template-entity-row configuration");
     }
     this._sourceConfig = { ...config };
-    this._renderedConfig = { ...config };
+    this._renderedConfig = initialRenderedConfig(config);
     void this._bindTemplates();
   }
 
@@ -118,28 +133,37 @@ class TemplateEntityRow extends LitElement {
     const hs = await getHass();
     if (generation !== this._bindGeneration) return;
 
-    for (const key of OPTIONS) {
-      const source = this._sourceConfig[key];
-      if (!hasTemplate(source)) {
-        if (typeof source === "string") {
-          this._setRenderedValue(key, normaliseValue(key, source, hs));
+    const subscriptions = await Promise.all(
+      OPTIONS.map(async (key) => {
+        const source = this._sourceConfig[key];
+        if (!hasTemplate(source)) {
+          if (typeof source === "string") {
+            this._setRenderedValue(key, normaliseValue(key, source, hs));
+          }
+          return undefined;
         }
-        continue;
-      }
 
-      const unsubscribe = await subscribeTemplate(
-        source,
-        { config: this._sourceConfig },
-        (value) => {
-          if (generation !== this._bindGeneration) return;
-          this._setRenderedValue(key, normaliseValue(key, value, hs));
-        }
+        return subscribeTemplate(
+          source,
+          { config: this._sourceConfig },
+          (value) => {
+            if (generation !== this._bindGeneration) return;
+            this._setRenderedValue(key, normaliseValue(key, value, hs));
+          }
+        );
+      })
+    );
+
+    const activeSubscriptions = subscriptions.filter(
+      (unsubscribe): unsubscribe is () => Promise<void> =>
+        unsubscribe !== undefined
+    );
+    if (generation !== this._bindGeneration) {
+      await Promise.allSettled(
+        activeSubscriptions.map((unsubscribe) => unsubscribe())
       );
-      if (generation !== this._bindGeneration) {
-        await unsubscribe();
-      } else {
-        this._subscriptions.push(unsubscribe);
-      }
+    } else {
+      this._subscriptions.push(...activeSubscriptions);
     }
   }
 
