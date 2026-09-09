@@ -1,22 +1,21 @@
-import nodeResolve from "@rollup/plugin-node-resolve";
 import json from "@rollup/plugin-json";
-import typescript from "rollup-plugin-typescript2";
-import { terser } from "rollup-plugin-terser";
-import { getBabelOutputPlugin } from "@rollup/plugin-babel";
+import nodeResolve from "@rollup/plugin-node-resolve";
+import terser from "@rollup/plugin-terser";
+import typescript from "@rollup/plugin-typescript";
 
-const dev = process.env.ROLLUP_WATCH;
+const dev = Boolean(process.env.ROLLUP_WATCH);
 
 export default {
   input: "src/main.ts",
   output: {
     file: "template-entity-row.js",
     format: "es",
+    sourcemap: dev,
   },
   plugins: [
     nodeResolve(),
     json(),
     typescript(),
-    getBabelOutputPlugin({ presets: ["@babel/preset-env"] }),
     !dev && terser({ format: { comments: false } }),
   ],
 };
