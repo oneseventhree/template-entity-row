@@ -10,3 +10,4 @@
 - Hide the complete row when `condition` evaluates to false.
 - Modernize the TypeScript and Rollup build.
 - Add an automated GitHub build check.
+- Add HACS repository validation.

@@ -34,3 +34,14 @@ jobs:
 
       - name: Verify committed bundle
         run: git diff --exit-code -- template-entity-row.js
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate HACS dashboard repository
+        uses: hacs/action@main
+        with:
+          category: plugin
