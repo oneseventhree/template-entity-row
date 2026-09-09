@@ -229,6 +229,8 @@ class TemplateEntityRow extends LitElement {
       isTrue(config.native_icon) &&
       config.icon === undefined &&
       config.image === undefined;
+    const iconColor =
+      config.color ?? (useNativeIcon && stateColor ? "state" : undefined);
     const hasAction = Boolean(
       config.entity ||
         config.tap_action ||
@@ -237,28 +239,16 @@ class TemplateEntityRow extends LitElement {
     );
     return html`
       <div id="wrapper">
-        ${useNativeIcon
-          ? html`
-              <ha-state-icon
-                .hass=${this.hass}
-                .stateObj=${entity}
-                @action=${this._handleAction}
-                class=${classMap({ icon: true, pointer: hasAction })}
-                .stateColor=${stateColor}
-              ></ha-state-icon>
-            `
-          : html`
-              <state-badge
-                .hass=${this.hass}
-                .stateObj=${entity}
-                @action=${this._handleAction}
-                .overrideIcon=${icon}
-                .overrideImage=${config.image}
-                .color=${config.color}
-                class=${classMap({ icon: true, pointer: hasAction })}
-                .stateColor=${stateColor}
-              ></state-badge>
-            `}
+        <state-badge
+          .hass=${this.hass}
+          .stateObj=${entity}
+          @action=${this._handleAction}
+          .overrideIcon=${useNativeIcon ? undefined : icon}
+          .overrideImage=${useNativeIcon ? undefined : config.image}
+          .color=${iconColor}
+          class=${classMap({ icon: true, pointer: hasAction })}
+          .stateColor=${stateColor}
+        ></state-badge>
         <div
           class=${classMap({ info: true, pointer: hasAction })}
           @action=${this._handleAction}

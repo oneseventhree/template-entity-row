@@ -78,7 +78,7 @@ settings.
 | `active` | Boolean or template controlling active icon state |
 | `condition` | Boolean or template controlling row visibility |
 | `toggle` | Boolean or template that replaces the state with a toggle |
-| `native_icon` | Use Home Assistant's native state icon when `icon` and `image` are unset |
+| `native_icon` | Use Home Assistant's native state-aware icon and state colour when `icon` and `image` are unset |
 | `tap_action` | Standard action object or templated action configuration |
 | `hold_action` | Standard action object or templated action configuration |
 | `double_tap_action` | Standard action object or templated action configuration |
@@ -93,7 +93,8 @@ All display options accept Home Assistant Jinja templates. Templates receive:
 ## Native icons
 
 Set `native_icon: true` without `icon` or `image` to use Home Assistant's
-native state-aware icon renderer:
+native state-aware icon and the same state colouring used by standard entity
+rows:
 
 ```yaml
 type: custom:template-entity-row

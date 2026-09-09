@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-beta.4
+
+- Fix `native_icon` so it uses Home Assistant's state-aware icon together with
+  the standard entity-row state colouring.
+
 ## 2.0.0-beta.3
 
 - Add a visual dashboard editor through `getConfigElement()`.
