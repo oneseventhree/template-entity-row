@@ -1,5 +1,8 @@
 # template-entity-row
 
+[![Build](https://github.com/oneseventhree/template-entity-row/actions/workflows/build.yml/badge.svg?branch=development)](https://github.com/oneseventhree/template-entity-row/actions/workflows/build.yml)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://www.hacs.xyz/docs/faq/custom_repositories/)
+
 Display Jinja templates in a Home Assistant Entities card row.
 
 This is a maintained fork of Thomas Lovén's original
