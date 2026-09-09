@@ -46,3 +46,31 @@ jobs:
         with:
           category: plugin
           ignore: topics
+
+  prerelease:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+    needs:
+      - build
+      - hacs
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Publish beta release if needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists"
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --title "$TAG" \
+              --notes-file CHANGELOG.md \
+              --prerelease
+          fi
