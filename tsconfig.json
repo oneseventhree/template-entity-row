@@ -1,9 +1,14 @@
 {
   "compilerOptions": {
-    "target": "es2017",
-    "moduleResolution": "node",
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true
-  }
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
+    "noEmit": true,
+    "strict": false
+  },
+  "include": ["src/**/*.ts"]
 }

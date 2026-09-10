@@ -1,6 +1,6 @@
 const ID_STORAGE_KEY = "browser_mod-browser-id";
-export function BrowserID() {
+
+export function browserId(): string {
   if (document.querySelector("hc-main")) return "CAST";
-  if (localStorage[ID_STORAGE_KEY]) return localStorage[ID_STORAGE_KEY];
-  return "";
+  return localStorage.getItem(ID_STORAGE_KEY) ?? "";
 }

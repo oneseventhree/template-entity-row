@@ -1,20 +1,25 @@
-export async function hass_base_el() {
+export async function hassBaseElement(): Promise<any> {
   await Promise.race([
     customElements.whenDefined("home-assistant"),
     customElements.whenDefined("hc-main"),
   ]);
 
-  const element = customElements.get("home-assistant")
+  const tag = customElements.get("home-assistant")
     ? "home-assistant"
     : "hc-main";
 
-  while (!document.querySelector(element))
-    await new Promise((r) => window.setTimeout(r, 100));
-  return document.querySelector(element);
+  let element = document.querySelector(tag) as any;
+  while (!element) {
+    await new Promise((resolve) => window.setTimeout(resolve, 100));
+    element = document.querySelector(tag) as any;
+  }
+  return element;
 }
 
-export async function hass() {
-  const base: any = await hass_base_el();
-  while (!base.hass) await new Promise((r) => window.setTimeout(r, 100));
+export async function getHass(): Promise<any> {
+  const base = await hassBaseElement();
+  while (!base.hass) {
+    await new Promise((resolve) => window.setTimeout(resolve, 100));
+  }
   return base.hass;
 }

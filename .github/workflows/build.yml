@@ -1,0 +1,108 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+      - development
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run check
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify committed bundle
+        run: git diff --exit-code -- template-entity-row.js
+
+  hacs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate HACS dashboard repository
+        uses: hacs/action@main
+        with:
+          category: plugin
+          ignore: topics
+
+  prerelease:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+    needs:
+      - build
+      - hacs
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Publish beta release if needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$VERSION" != *-* ]]; then
+            echo "$VERSION is stable; skipping prerelease publication"
+            exit 0
+          fi
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists"
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --title "$TAG" \
+              --notes-file CHANGELOG.md \
+              --prerelease
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs:
+      - build
+      - hacs
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Publish stable release if needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists"
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --title "$TAG" \
+              --notes-file CHANGELOG.md \
+              --latest
+          fi
+          fi

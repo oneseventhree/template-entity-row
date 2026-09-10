@@ -1,10 +1,11 @@
-import { LitElement, html, css } from "lit";
-import { property } from "lit/decorators.js";
+import { LitElement, css, html, nothing } from "lit";
+import { property, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
-import { bindActionHandler } from "./helpers/action";
 import pjson from "../package.json";
-import { bind_template, hasTemplate } from "./helpers/templates";
-import { hass } from "./helpers/hass";
+import "./editor";
+import { bindActionHandler } from "./helpers/action";
+import { getHass } from "./helpers/hass";
+import { hasTemplate, subscribeTemplate } from "./helpers/templates";
 
 const OPTIONS = [
   "icon",
@@ -15,201 +16,397 @@ const OPTIONS = [
   "condition",
   "image",
   "entity",
-  // Secret option -
-  // Set color to a hs-color value ("[<hue>,<saturation>]")
-  // with hue in the range 0-360 and saturation 0-100.
-  // Works only if entity is unset and active is set.
+  "native_icon",
   "color",
   "toggle",
   "tap_action",
   "hold_action",
   "double_tap_action",
-];
+] as const;
+
+const TRIMMED_OPTIONS = new Set([
+  "icon",
+  "entity",
+  "image",
+  "color",
+  "active",
+  "condition",
+  "native_icon",
+  "toggle",
+]);
 
 const LOCALIZE_PATTERN = /_\([^)]*\)/g;
 
-const translate = (hass, text: String) => {
-  return text.replace(LOCALIZE_PATTERN, (key) => {
-    const params = key
-      .substring(2, key.length - 1)
-      .split(new RegExp(/\s*,\s*/));
-    return hass.localize.apply(null, params) || key;
+function translate(hass: any, value: string): string {
+  return value.replace(LOCALIZE_PATTERN, (key) => {
+    const params = key.substring(2, key.length - 1).split(/\s*,\s*/);
+    return hass.localize(...params) || key;
   });
-};
+}
+
+function isTrue(value: unknown): boolean {
+  return value === true || String(value).trim().toLowerCase() === "true";
+}
+
+function normaliseValue(key: string, value: unknown, hass: any): unknown {
+  if (typeof value !== "string") return value;
+  const translated = translate(hass, value);
+  return TRIMMED_OPTIONS.has(key) ? translated.trim() : translated;
+}
+
+function initialRenderedConfig(
+  config: Record<string, any>
+): Record<string, any> {
+  const rendered = { ...config };
+  for (const key of OPTIONS) {
+    if (hasTemplate(config[key])) {
+      delete rendered[key];
+    }
+  }
+  if (hasTemplate(config.condition)) {
+    rendered.condition = false;
+  }
+  return rendered;
+}
 
 class TemplateEntityRow extends LitElement {
-  @property() _config;
-  @property() hass;
-  @property() config; // Rendered configuration of the row to display
-  @property() _action;
+  @property({ attribute: false }) hass: any;
+  @state() private _sourceConfig: Record<string, any> = {};
+  @state() private _renderedConfig: Record<string, any> = {};
+  @property({ type: Boolean, reflect: true }) hidden = false;
 
-  setConfig(config) {
-    this._config = { ...config };
-    this.config = { ...this._config };
+  private _subscriptions: Array<() => Promise<void>> = [];
+  private _bindGeneration = 0;
+  private _actionHandler?: (event: Event) => void;
+  private _nativeWeatherGeneration = 0;
+  private _nativeWeatherEntity?: string;
+  @state() private _nativeWeatherRow?: any;
 
-    this.bind_templates();
+  static async getConfigElement(): Promise<HTMLElement> {
+    await customElements.whenDefined("template-entity-row-editor");
+    return document.createElement("template-entity-row-editor");
   }
 
-  async bind_templates() {
-    const hs = await hass();
-    for (const k of OPTIONS) {
-      if (!this._config[k]) continue;
-      if (hasTemplate(this._config[k])) {
-        bind_template(
-          (res) => {
-            const state = { ...this.config };
-            if (typeof res === "string") res = translate(hs, res);
-            state[k] = res;
-            this.config = state;
-          },
-          this._config[k],
-          { config: this._config }
-        );
-      } else if (typeof this._config[k] === "string") {
-        this.config[k] = translate(hs, this._config[k]);
-      }
+  setConfig(config: Record<string, any>): void {
+    if (!config || typeof config !== "object") {
+      throw new Error("Invalid template-entity-row configuration");
     }
-    this.requestUpdate();
+    this._sourceConfig = { ...config };
+    this._renderedConfig = initialRenderedConfig(config);
+    void this._bindTemplates();
   }
 
-  async firstUpdated() {
-    // Hijack the action handler from the hidden generic entity row in the #staging area
-    // Much easier than trying to implement all of this ourselves
-    const gen_row = this.shadowRoot.querySelector(
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (Object.keys(this._sourceConfig).length && !this._subscriptions.length) {
+      void this._bindTemplates();
+    }
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    void this._clearSubscriptions();
+  }
+
+  protected updated(changed: Map<PropertyKey, unknown>): void {
+    if (changed.has("_renderedConfig")) {
+      const condition = this._renderedConfig.condition;
+      const hasCondition =
+        condition !== undefined &&
+        String(condition).trim() !== "";
+      this.hidden = hasCondition && !isTrue(condition);
+    }
+    if (changed.has("hass") && this._nativeWeatherRow) {
+      this._nativeWeatherRow.hass = this.hass;
+    }
+    if (changed.has("_renderedConfig")) {
+      void this._ensureNativeWeatherRow();
+    }
+    this._bindActionElements();
+  }
+
+  private async _ensureNativeWeatherRow(): Promise<void> {
+    const config = this._renderedConfig;
+    const entity = config.entity;
+    const shouldUseNativeWeather =
+      (config.native_icon === undefined || isTrue(config.native_icon)) &&
+      typeof entity === "string" &&
+      entity.startsWith("weather.") &&
+      config.icon === undefined &&
+      config.image === undefined;
+
+    if (!shouldUseNativeWeather) {
+      this._nativeWeatherGeneration++;
+      this._nativeWeatherEntity = undefined;
+      this._nativeWeatherRow = undefined;
+      return;
+    }
+    if (this._nativeWeatherRow && this._nativeWeatherEntity === entity) {
+      this._nativeWeatherRow.hass = this.hass;
+      return;
+    }
+
+    const generation = ++this._nativeWeatherGeneration;
+    try {
+      const helpers = await (window as any).loadCardHelpers();
+      const row = await helpers.createRowElement({ entity });
+      if (generation !== this._nativeWeatherGeneration) return;
+
+      row.hass = this.hass;
+      this._nativeWeatherEntity = entity;
+      this._nativeWeatherRow = row;
+    } catch (error) {
+      if (generation !== this._nativeWeatherGeneration) return;
+      console.warn("Unable to load Home Assistant's native weather row", error);
+    }
+  }
+
+  protected async firstUpdated(): Promise<void> {
+    const genericRow = this.shadowRoot?.querySelector(
       "#staging hui-generic-entity-row"
     ) as any;
-    if (!gen_row) return;
-    await gen_row.updateComplete;
-    this._action = gen_row._handleAction;
-    const options = {
-      hasHold: this._config.hold_action !== undefined,
-      hasDoubleClick: this._config.hold_action !== undefined,
-    };
-    if (
-      this.config.entity ||
-      this.config.tap_action ||
-      this.config.hold_action ||
-      this.config.double_tap_action
-    ) {
-      bindActionHandler(this.shadowRoot.querySelector("state-badge"), options);
-      bindActionHandler(this.shadowRoot.querySelector(".info"), options);
+    if (!genericRow) return;
+    await genericRow.updateComplete;
+    this._actionHandler = genericRow._handleAction?.bind(genericRow);
+  }
+
+  private async _clearSubscriptions(): Promise<void> {
+    const subscriptions = this._subscriptions.splice(0);
+    await Promise.allSettled(subscriptions.map((unsubscribe) => unsubscribe()));
+  }
+
+  private async _bindTemplates(): Promise<void> {
+    const generation = ++this._bindGeneration;
+    await this._clearSubscriptions();
+    const hs = await getHass();
+    if (generation !== this._bindGeneration) return;
+
+    const subscriptions = await Promise.all(
+      OPTIONS.map(async (key) => {
+        const source = this._sourceConfig[key];
+        if (!hasTemplate(source)) {
+          if (typeof source === "string") {
+            this._setRenderedValue(key, normaliseValue(key, source, hs));
+          }
+          return undefined;
+        }
+
+        return subscribeTemplate(
+          source,
+          { config: this._sourceConfig },
+          (value) => {
+            if (generation !== this._bindGeneration) return;
+            this._setRenderedValue(key, normaliseValue(key, value, hs));
+          }
+        );
+      })
+    );
+
+    const activeSubscriptions = subscriptions.filter(
+      (unsubscribe): unsubscribe is () => Promise<void> =>
+        unsubscribe !== undefined
+    );
+    if (generation !== this._bindGeneration) {
+      await Promise.allSettled(
+        activeSubscriptions.map((unsubscribe) => unsubscribe())
+      );
+    } else {
+      this._subscriptions.push(...activeSubscriptions);
     }
   }
 
-  _actionHandler(ev) {
-    return this._action?.(ev);
+  private _setRenderedValue(key: string, value: unknown): void {
+    this._renderedConfig = { ...this._renderedConfig, [key]: value };
   }
 
-  render() {
-    const base = this.hass.states[this.config.entity];
-    const entity = (base && JSON.parse(JSON.stringify(base))) || {
-      entity_id: "binary_sensor.",
-      attributes: { icon: "no:icon", friendly_name: "" },
-      state: "off",
+  private _handleAction = (event: Event): void => {
+    this._actionHandler?.(event);
+  };
+
+  private _bindActionElements(): void {
+    const config = this._renderedConfig;
+    if (
+      !config.entity &&
+      !config.tap_action &&
+      !config.hold_action &&
+      !config.double_tap_action
+    ) {
+      return;
+    }
+    const options = {
+      hasHold: config.hold_action !== undefined,
+      hasDoubleClick: config.double_tap_action !== undefined,
     };
+    bindActionHandler(this.shadowRoot?.querySelector(".icon") ?? null, options);
+    bindActionHandler(this.shadowRoot?.querySelector(".info") ?? null, options);
+  }
+
+  protected render() {
+    if (!this.hass || !this._renderedConfig) return nothing;
+
+    const config = this._renderedConfig;
+    const base = this.hass.states?.[config.entity];
+    const entity = base
+      ? {
+          ...base,
+          attributes: { ...base.attributes },
+        }
+      : {
+          entity_id: "binary_sensor.template_entity_row",
+          attributes: { icon: "no:icon", friendly_name: "" },
+          state: "off",
+        };
 
     const icon =
-      this.config.icon !== undefined
-        ? this.config.icon || "no:icon"
-        : undefined;
-    const image = this.config.image;
-    let color = this.config.color;
-
+      config.icon !== undefined ? config.icon || "no:icon" : undefined;
     const name =
-      this.config.name ??
-      entity?.attributes?.friendly_name ??
-      entity?.entity_id;
-    const secondary = this.config.secondary;
-    const state = this.config.state ?? base?.state;
-    let stateColor = true;
+      config.name ?? entity.attributes?.friendly_name ?? entity.entity_id;
+    const state = config.state ?? base?.state;
+    const active = isTrue(config.active);
+    const stateColor = config.active === undefined ? true : active;
 
-    const active = this.config.active ?? false;
     if (active) {
       entity.attributes.brightness = 255;
       entity.state = "on";
-    }
-    if (this.config.active === false) {
+    } else if (config.active !== undefined) {
       entity.state = "off";
-      stateColor = false;
     }
 
-    const hidden =
-      this.config.condition !== undefined &&
-      String(this.config.condition).toLowerCase() !== "true";
-    const show_toggle = this.config.toggle && this.config.entity;
-    const has_action =
-      this.config.entity ||
-      this.config.tap_action ||
-      this.config.hold_action ||
-      this.config.double_tap_action;
-
+    const showToggle = isTrue(config.toggle) && Boolean(config.entity);
+    const useNativeIcon =
+      (config.native_icon === undefined || isTrue(config.native_icon)) &&
+      config.icon === undefined &&
+      config.image === undefined;
+    const useNativeWeatherIcon =
+      useNativeIcon &&
+      typeof config.entity === "string" &&
+      config.entity.startsWith("weather.");
+    const iconColor =
+      config.color ?? (useNativeIcon && stateColor ? "state" : undefined);
+    const hasAction = Boolean(
+      config.entity ||
+        config.tap_action ||
+        config.hold_action ||
+        config.double_tap_action
+    );
     return html`
-      <div id="wrapper" class="${hidden ? "hidden" : ""}">
-        <state-badge
-          .hass=${this.hass}
-          .stateObj=${entity}
-          @action=${this._actionHandler}
-          .overrideIcon=${icon}
-          .overrideImage=${image}
-          .color=${color}
-          class=${classMap({ pointer: has_action })}
-          ?stateColor=${stateColor}
-        ></state-badge>
+      <div id="wrapper">
+        ${useNativeWeatherIcon && this._nativeWeatherRow
+          ? html`
+              <div
+                class=${classMap({
+                  icon: true,
+                  "native-weather-icon": true,
+                  pointer: hasAction,
+                })}
+                @action=${this._handleAction}
+              >
+                ${this._nativeWeatherRow ?? nothing}
+              </div>
+            `
+          : html`
+              <state-badge
+                .hass=${this.hass}
+                .stateObj=${entity}
+                @action=${this._handleAction}
+                .overrideIcon=${useNativeIcon ? undefined : icon}
+                .overrideImage=${useNativeIcon ? undefined : config.image}
+                .color=${iconColor}
+                class=${classMap({ icon: true, pointer: hasAction })}
+                .stateColor=${stateColor}
+              ></state-badge>
+            `}
         <div
-          class=${classMap({ info: true, pointer: has_action })}
-          @action="${this._actionHandler}"
+          class=${classMap({ info: true, pointer: hasAction })}
+          @action=${this._handleAction}
         >
           ${name}
-          <div class="secondary">${secondary}</div>
+          ${config.secondary !== undefined
+            ? html`<div class="secondary">${config.secondary}</div>`
+            : nothing}
         </div>
         <div class="state">
-          ${show_toggle
-            ? html`<ha-entity-toggle .hass=${this.hass} .stateObj=${entity}>
-              </ha-entity-toggle>`
+          ${showToggle
+            ? html`
+                <ha-entity-toggle .hass=${this.hass} .stateObj=${entity}>
+                </ha-entity-toggle>
+              `
             : state}
         </div>
       </div>
       <div id="staging">
-        <hui-generic-entity-row .hass=${this.hass} .config=${this.config}>
+        <hui-generic-entity-row .hass=${this.hass} .config=${config}>
         </hui-generic-entity-row>
       </div>
     `;
   }
 
-  static get styles() {
-    return [
-      (customElements.get("hui-generic-entity-row") as any)?.styles,
-      css`
-        :host {
-          display: inline;
-        }
-        #wrapper {
-          display: flex;
-          align-items: center;
-          flex-direction: row;
-        }
-        .state {
-          text-align: right;
-        }
-        #wrapper {
-          min-height: 40px;
-        }
-        #wrapper.hidden {
-          display: none;
-        }
-        #staging {
-          display: none;
-        }
-      `,
-    ];
-  }
+  static styles = [
+    (customElements.get("hui-generic-entity-row") as any)?.styles,
+    css`
+      :host {
+        display: block;
+      }
+      :host([hidden]) {
+        display: none !important;
+      }
+      #wrapper {
+        display: flex;
+        align-items: center;
+        flex-direction: row;
+        min-height: 40px;
+      }
+      .icon {
+        flex: 0 0 40px;
+      }
+      .native-weather-icon {
+        height: 40px;
+        overflow: hidden;
+        width: 40px;
+      }
+      .native-weather-icon hui-weather-entity-row {
+        display: block;
+        min-width: 320px;
+        pointer-events: none;
+        width: 320px;
+      }
+      .info {
+        flex: 1 1 30%;
+        min-width: 0;
+        padding-inline: 16px 8px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .secondary {
+        color: var(--secondary-text-color);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .state {
+        text-align: var(--float-end, right);
+      }
+      .pointer {
+        cursor: pointer;
+      }
+      #staging {
+        display: none;
+      }
+    `,
+  ];
 }
 
 if (!customElements.get("template-entity-row")) {
   customElements.define("template-entity-row", TemplateEntityRow);
   console.info(
     `%cTEMPLATE-ENTITY-ROW ${pjson.version} IS INSTALLED`,
-    "color: green; font-weight: bold",
-    ""
+    "color: green; font-weight: bold"
   );
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "template-entity-row": TemplateEntityRow;
+  }
 }
