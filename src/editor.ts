@@ -74,8 +74,8 @@ class TemplateEntityRowEditor extends LitElement {
       { name: "toggle", selector: { boolean: {} } },
       { name: "native_icon", selector: { boolean: {} } },
       { name: "active", selector: activeSelector },
-      { name: "image", selector: templateSelector() },
       { name: "condition", selector: templateSelector() },
+      { name: "image", selector: templateSelector() },
     ];
   }
 

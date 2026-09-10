@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-beta.11
+
+- Place Show entity toggle first in More options, above the native icon control.
+- Place Image template directly below Visibility condition template.
+
 ## 2.0.0-beta.10
 
 - Move Show entity toggle to the top of More options, above the native icon
