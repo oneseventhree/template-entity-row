@@ -105,4 +105,15 @@ jobs:
               --notes-file CHANGELOG.md \
               --latest
           fi
+
+      - name: Remove prerelease versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 100 --json tagName,isPrerelease \
+            --jq '.[] | select(.isPrerelease) | .tagName' |
+          while read -r TAG; do
+            [ -z "$TAG" ] && continue
+            gh release delete "$TAG" --cleanup-tag --yes
+          done
           fi
