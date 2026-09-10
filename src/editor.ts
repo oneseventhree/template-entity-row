@@ -28,6 +28,7 @@ class TemplateEntityRowEditor extends LitElement {
   @property({ attribute: false }) hass: any;
   @state() private _config: Record<string, any> = {};
   @state() private _moreOptionsExpanded = false;
+  @state() private _interactionsExpanded = false;
 
   setConfig(config: Record<string, any>): void {
     const next: Record<string, any> = { native_icon: true, ...config };
@@ -137,14 +138,26 @@ class TemplateEntityRowEditor extends LitElement {
             .computeLabel=${this._computeLabel}
             @value-changed=${this._moreOptionsValueChanged}
           ></ha-form>
-          <h3>Interactions</h3>
-          <ha-form
-            .hass=${this.hass}
-            .data=${this._config}
-            .schema=${this._interactionSchema}
-            .computeLabel=${this._computeLabel}
-            @value-changed=${this._valueChanged}
-          ></ha-form>
+          <ha-expansion-panel
+            class="nested-panel"
+            outlined
+            .expanded=${this._interactionsExpanded}
+            @expanded-changed=${this._interactionsExpandedChanged}
+          >
+            <div slot="header" class="expansion-header">
+              <ha-icon icon="mdi:gesture-tap"></ha-icon>
+              <span>Interactions</span>
+            </div>
+            <div class="interactions-content">
+              <ha-form
+                .hass=${this.hass}
+                .data=${this._config}
+                .schema=${this._interactionSchema}
+                .computeLabel=${this._computeLabel}
+                @value-changed=${this._valueChanged}
+              ></ha-form>
+            </div>
+          </ha-expansion-panel>
         </div>
       </ha-expansion-panel>
     `;
@@ -166,6 +179,13 @@ class TemplateEntityRowEditor extends LitElement {
 
   private _expandedChanged(event: CustomEvent): void {
     this._moreOptionsExpanded = Boolean(
+      event.detail?.expanded ?? (event.target as any).expanded
+    );
+  }
+
+  private _interactionsExpandedChanged(event: CustomEvent): void {
+    event.stopPropagation();
+    this._interactionsExpanded = Boolean(
       event.detail?.expanded ?? (event.target as any).expanded
     );
   }
@@ -237,10 +257,11 @@ class TemplateEntityRowEditor extends LitElement {
     .more-options-content {
       padding: 0 16px 16px;
     }
-    h3 {
-      font-size: var(--ha-font-size-l);
-      font-weight: var(--ha-font-weight-medium);
-      margin: 24px 0 8px;
+    .nested-panel {
+      margin-top: 20px;
+    }
+    .interactions-content {
+      padding: 0 16px 16px;
     }
   `;
 }

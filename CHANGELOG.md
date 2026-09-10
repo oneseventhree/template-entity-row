@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0-beta.9
+
+- Put Interactions in its own collapsed expansion panel inside More options so
+  action controls remain hidden until explicitly opened.
+
 ## 2.0.0-beta.8
 
 - Replace the manual Show row switch with the original optional visibility
