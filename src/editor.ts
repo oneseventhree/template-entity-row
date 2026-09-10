@@ -11,7 +11,7 @@ const LABELS: Record<string, string> = {
   image: "Image template",
   color: "Icon colour template",
   active: "Icon appearance",
-  condition: "Show row",
+  condition: "Visibility condition template",
   toggle: "Show entity toggle",
   native_icon: "Use native Home Assistant icon",
   tap_action: "Tap action",
@@ -27,20 +27,35 @@ const textSelector = (multiline = false) => ({
 class TemplateEntityRowEditor extends LitElement {
   @property({ attribute: false }) hass: any;
   @state() private _config: Record<string, any> = {};
-  @state() private _interactionsExpanded = false;
+  @state() private _moreOptionsExpanded = false;
 
   setConfig(config: Record<string, any>): void {
-    this._config = { native_icon: true, condition: true, ...config };
+    const next: Record<string, any> = { native_icon: true, ...config };
+    if (next.condition === true) {
+      delete next.condition;
+    } else if (next.condition === false) {
+      next.condition = "{{ false }}";
+    }
+    this._config = next;
   }
 
-  private get _mainSchema(): any[] {
+  private get _primarySchema(): any[] {
     const entitySelector = hasTemplate(this._config.entity)
       ? templateSelector()
       : { entity: {} };
-    const booleanOrTemplateSelector = (key: string) =>
-      typeof this._config[key] === "string"
-        ? templateSelector()
-        : { boolean: {} };
+
+    return [
+      { name: "entity", selector: entitySelector },
+      { name: "name", selector: templateSelector() },
+      { name: "icon", selector: templateSelector() },
+      { name: "state", selector: templateSelector() },
+      { name: "secondary", selector: templateSelector() },
+      { name: "image", selector: templateSelector() },
+      { name: "color", selector: templateSelector() },
+    ];
+  }
+
+  private get _moreOptionsSchema(): any[] {
     const activeSelector =
       typeof this._config.active === "string"
         ? templateSelector()
@@ -56,24 +71,14 @@ class TemplateEntityRowEditor extends LitElement {
           };
 
     return [
-      { name: "entity", selector: entitySelector },
-      { name: "name", selector: templateSelector() },
-      { name: "icon", selector: templateSelector() },
-      { name: "state", selector: templateSelector() },
-      { name: "secondary", selector: templateSelector() },
-      { name: "image", selector: templateSelector() },
-      { name: "color", selector: templateSelector() },
       { name: "native_icon", selector: { boolean: {} } },
       { name: "active", selector: activeSelector },
-      {
-        name: "condition",
-        selector: booleanOrTemplateSelector("condition"),
-      },
-      { name: "toggle", selector: booleanOrTemplateSelector("toggle") },
+      { name: "condition", selector: templateSelector() },
+      { name: "toggle", selector: { boolean: {} } },
     ];
   }
 
-  private get _mainData(): Record<string, any> {
+  private get _moreOptionsData(): Record<string, any> {
     if (typeof this._config.active === "string") {
       return this._config;
     }
@@ -109,22 +114,30 @@ class TemplateEntityRowEditor extends LitElement {
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${this._mainData}
-        .schema=${this._mainSchema}
+        .data=${this._config}
+        .schema=${this._primarySchema}
         .computeLabel=${this._computeLabel}
-        @value-changed=${this._mainValueChanged}
+        @value-changed=${this._valueChanged}
       ></ha-form>
 
       <ha-expansion-panel
         outlined
-        .expanded=${this._interactionsExpanded}
+        .expanded=${this._moreOptionsExpanded}
         @expanded-changed=${this._expandedChanged}
       >
         <div slot="header" class="expansion-header">
-          <ha-icon icon="mdi:gesture-tap"></ha-icon>
-          <span>Interactions</span>
+          <ha-icon icon="mdi:tune"></ha-icon>
+          <span>More options</span>
         </div>
-        <div class="interaction-content">
+        <div class="more-options-content">
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._moreOptionsData}
+            .schema=${this._moreOptionsSchema}
+            .computeLabel=${this._computeLabel}
+            @value-changed=${this._moreOptionsValueChanged}
+          ></ha-form>
+          <h3>Interactions</h3>
           <ha-form
             .hass=${this.hass}
             .data=${this._config}
@@ -144,18 +157,20 @@ class TemplateEntityRowEditor extends LitElement {
     ) {
       return schema.name === "active"
         ? "Active template"
-        : `${LABELS[schema.name]} template`;
+        : schema.name === "toggle"
+          ? "Toggle template"
+          : LABELS[schema.name];
     }
     return LABELS[schema.name] ?? schema.name;
   };
 
   private _expandedChanged(event: CustomEvent): void {
-    this._interactionsExpanded = Boolean(
+    this._moreOptionsExpanded = Boolean(
       event.detail?.expanded ?? (event.target as any).expanded
     );
   }
 
-  private _mainValueChanged(event: CustomEvent): void {
+  private _moreOptionsValueChanged(event: CustomEvent): void {
     const value = { ...event.detail.value };
     const remove: string[] = [];
     if (typeof this._config.active !== "string") {
@@ -219,8 +234,13 @@ class TemplateEntityRowEditor extends LitElement {
       font-weight: 500;
       gap: 12px;
     }
-    .interaction-content {
+    .more-options-content {
       padding: 0 16px 16px;
+    }
+    h3 {
+      font-size: var(--ha-font-size-l);
+      font-weight: var(--ha-font-weight-medium);
+      margin: 24px 0 8px;
     }
   `;
 }

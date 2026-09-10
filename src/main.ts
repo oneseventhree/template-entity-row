@@ -111,7 +111,10 @@ class TemplateEntityRow extends LitElement {
   protected updated(changed: Map<PropertyKey, unknown>): void {
     if (changed.has("_renderedConfig")) {
       const condition = this._renderedConfig.condition;
-      this.hidden = condition !== undefined && !isTrue(condition);
+      const hasCondition =
+        condition !== undefined &&
+        String(condition).trim() !== "";
+      this.hidden = hasCondition && !isTrue(condition);
     }
     if (changed.has("hass") && this._nativeWeatherRow) {
       this._nativeWeatherRow.hass = this.hass;

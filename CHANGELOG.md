@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0-beta.8
+
+- Replace the manual Show row switch with the original optional visibility
+  condition template. An empty condition always shows the row.
+- Move native icon, icon appearance, visibility, entity toggle and all
+  interaction controls into one More options section that is collapsed by
+  default.
+
 ## 2.0.0-beta.7
 
 - Make the visibility control default to on so its displayed state matches the
