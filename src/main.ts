@@ -126,7 +126,7 @@ class TemplateEntityRow extends LitElement {
     const config = this._renderedConfig;
     const entity = config.entity;
     const shouldUseNativeWeather =
-      isTrue(config.native_icon) &&
+      (config.native_icon === undefined || isTrue(config.native_icon)) &&
       typeof entity === "string" &&
       entity.startsWith("weather.") &&
       config.icon === undefined &&
@@ -271,7 +271,7 @@ class TemplateEntityRow extends LitElement {
 
     const showToggle = isTrue(config.toggle) && Boolean(config.entity);
     const useNativeIcon =
-      isTrue(config.native_icon) &&
+      (config.native_icon === undefined || isTrue(config.native_icon)) &&
       config.icon === undefined &&
       config.image === undefined;
     const useNativeWeatherIcon =

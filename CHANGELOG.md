@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0-beta.6
+
+- Keep boolean editor controls within the available editor width so active
+  switches and focus outlines are not clipped at the right edge.
+- Enable native Home Assistant icons by default and place the control directly
+  below the icon colour template so the editor follows the icon configuration
+  flow.
+
 ## 2.0.0-beta.5
 
 - Render weather entities with Home Assistant's layered native weather artwork

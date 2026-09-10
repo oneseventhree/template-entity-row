@@ -30,7 +30,7 @@ class TemplateEntityRowEditor extends LitElement {
   @state() private _interactionsExpanded = false;
 
   setConfig(config: Record<string, any>): void {
-    this._config = { ...config };
+    this._config = { native_icon: true, ...config };
   }
 
   private get _mainSchema(): any[] {
@@ -50,13 +50,13 @@ class TemplateEntityRowEditor extends LitElement {
       { name: "secondary", selector: templateSelector() },
       { name: "image", selector: templateSelector() },
       { name: "color", selector: templateSelector() },
+      { name: "native_icon", selector: { boolean: {} } },
       { name: "active", selector: booleanOrTemplateSelector("active") },
       {
         name: "condition",
         selector: booleanOrTemplateSelector("condition"),
       },
       { name: "toggle", selector: booleanOrTemplateSelector("toggle") },
-      { name: "native_icon", selector: { boolean: {} } },
     ];
   }
 
@@ -136,13 +136,22 @@ class TemplateEntityRowEditor extends LitElement {
 
   static styles = css`
     :host {
+      box-sizing: border-box;
       display: block;
+      max-width: 100%;
+      padding-inline-end: 12px;
     }
     ha-form {
+      box-sizing: border-box;
       display: block;
+      max-width: 100%;
+      overflow: visible;
+      width: 100%;
     }
     ha-expansion-panel {
+      box-sizing: border-box;
       display: block;
+      max-width: 100%;
       margin-top: 16px;
     }
     .expansion-header {
