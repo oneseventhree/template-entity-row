@@ -64,6 +64,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="$(node -p "require('./package.json').version")"
+          if [[ "$VERSION" != *-* ]]; then
+            echo "$VERSION is stable; skipping prerelease publication"
+            exit 0
+          fi
           TAG="v${VERSION}"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "$TAG already exists"
@@ -73,4 +77,32 @@ jobs:
               --title "$TAG" \
               --notes-file CHANGELOG.md \
               --prerelease
+
+  release:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs:
+      - build
+      - hacs
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Publish stable release if needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "$TAG already exists"
+          else
+            gh release create "$TAG" \
+              --target "$GITHUB_SHA" \
+              --title "$TAG" \
+              --notes-file CHANGELOG.md \
+              --latest
+          fi
           fi

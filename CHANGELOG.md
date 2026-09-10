@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.0.0
+
+- Add a Home Assistant visual editor while preserving existing YAML configurations.
+- Fix templated custom icons, including custom icon sets such as `phu:`.
+- Add native Home Assistant icon rendering, including layered weather artwork.
+- Prevent raw templates from appearing while rows initialize and load template subscriptions concurrently.
+- Add compact More options and Interactions sections with corrected toggle and visibility behavior.
+- Modernize the build, remove known dependency vulnerabilities and add automated build and HACS validation.
+
 ## 2.0.0-beta.11
 
 - Place Show entity toggle first in More options, above the native icon control.
