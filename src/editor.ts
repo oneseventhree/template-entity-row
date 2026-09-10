@@ -10,9 +10,9 @@ const LABELS: Record<string, string> = {
   secondary: "Secondary information template",
   image: "Image template",
   color: "Icon colour template",
-  active: "Active template",
-  condition: "Visibility condition template",
-  toggle: "Toggle template",
+  active: "Icon appearance",
+  condition: "Show row",
+  toggle: "Show entity toggle",
   native_icon: "Use native Home Assistant icon",
   tap_action: "Tap action",
   hold_action: "Hold action",
@@ -30,7 +30,7 @@ class TemplateEntityRowEditor extends LitElement {
   @state() private _interactionsExpanded = false;
 
   setConfig(config: Record<string, any>): void {
-    this._config = { native_icon: true, ...config };
+    this._config = { native_icon: true, condition: true, ...config };
   }
 
   private get _mainSchema(): any[] {
@@ -41,6 +41,19 @@ class TemplateEntityRowEditor extends LitElement {
       typeof this._config[key] === "string"
         ? templateSelector()
         : { boolean: {} };
+    const activeSelector =
+      typeof this._config.active === "string"
+        ? templateSelector()
+        : {
+            select: {
+              mode: "dropdown",
+              options: [
+                { value: "automatic", label: "Automatic" },
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+              ],
+            },
+          };
 
     return [
       { name: "entity", selector: entitySelector },
@@ -51,13 +64,28 @@ class TemplateEntityRowEditor extends LitElement {
       { name: "image", selector: templateSelector() },
       { name: "color", selector: templateSelector() },
       { name: "native_icon", selector: { boolean: {} } },
-      { name: "active", selector: booleanOrTemplateSelector("active") },
+      { name: "active", selector: activeSelector },
       {
         name: "condition",
         selector: booleanOrTemplateSelector("condition"),
       },
       { name: "toggle", selector: booleanOrTemplateSelector("toggle") },
     ];
+  }
+
+  private get _mainData(): Record<string, any> {
+    if (typeof this._config.active === "string") {
+      return this._config;
+    }
+    return {
+      ...this._config,
+      active:
+        this._config.active === undefined
+          ? "automatic"
+          : this._config.active
+            ? "active"
+            : "inactive",
+    };
   }
 
   private get _interactionSchema(): any[] {
@@ -81,10 +109,10 @@ class TemplateEntityRowEditor extends LitElement {
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${this._config}
+        .data=${this._mainData}
         .schema=${this._mainSchema}
         .computeLabel=${this._computeLabel}
-        @value-changed=${this._valueChanged}
+        @value-changed=${this._mainValueChanged}
       ></ha-form>
 
       <ha-expansion-panel
@@ -109,8 +137,17 @@ class TemplateEntityRowEditor extends LitElement {
     `;
   }
 
-  private _computeLabel = (schema: { name: string }): string =>
-    LABELS[schema.name] ?? schema.name;
+  private _computeLabel = (schema: { name: string }): string => {
+    if (
+      ["active", "condition", "toggle"].includes(schema.name) &&
+      typeof this._config[schema.name] === "string"
+    ) {
+      return schema.name === "active"
+        ? "Active template"
+        : `${LABELS[schema.name]} template`;
+    }
+    return LABELS[schema.name] ?? schema.name;
+  };
 
   private _expandedChanged(event: CustomEvent): void {
     this._interactionsExpanded = Boolean(
@@ -118,12 +155,34 @@ class TemplateEntityRowEditor extends LitElement {
     );
   }
 
+  private _mainValueChanged(event: CustomEvent): void {
+    const value = { ...event.detail.value };
+    const remove: string[] = [];
+    if (typeof this._config.active !== "string") {
+      if (value.active === "automatic") {
+        delete value.active;
+        remove.push("active");
+      } else {
+        value.active = value.active === "active";
+      }
+    }
+    this._applyValue(value, remove);
+  }
+
   private _valueChanged(event: CustomEvent): void {
+    this._applyValue(event.detail.value);
+  }
+
+  private _applyValue(
+    value: Record<string, any>,
+    remove: string[] = []
+  ): void {
     const config = {
       ...this._config,
-      ...event.detail.value,
+      ...value,
       type: "custom:template-entity-row",
     };
+    remove.forEach((key) => delete config[key]);
     this._config = config;
     this.dispatchEvent(
       new CustomEvent("config-changed", {

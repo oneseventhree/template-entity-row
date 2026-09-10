@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.0.0-beta.7
+
+- Make the visibility control default to on so its displayed state matches the
+  original behavior of an omitted `condition`.
+- Replace the inaccurate active switch with Automatic, Active and Inactive
+  choices because the original option has three distinct states.
+- Clarify the remaining boolean editor labels: Show row, Show entity toggle
+  and Use native Home Assistant icon.
+- Preserve template editors and template-specific labels when active,
+  condition or toggle contain Jinja.
+
 ## 2.0.0-beta.6
 
 - Keep boolean editor controls within the available editor width so active
