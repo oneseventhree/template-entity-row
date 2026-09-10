@@ -78,6 +78,9 @@ class TemplateEntityRow extends LitElement {
   private _subscriptions: Array<() => Promise<void>> = [];
   private _bindGeneration = 0;
   private _actionHandler?: (event: Event) => void;
+  private _nativeWeatherGeneration = 0;
+  private _nativeWeatherEntity?: string;
+  @state() private _nativeWeatherRow?: any;
 
   static async getConfigElement(): Promise<HTMLElement> {
     await customElements.whenDefined("template-entity-row-editor");
@@ -110,7 +113,49 @@ class TemplateEntityRow extends LitElement {
       const condition = this._renderedConfig.condition;
       this.hidden = condition !== undefined && !isTrue(condition);
     }
+    if (changed.has("hass") && this._nativeWeatherRow) {
+      this._nativeWeatherRow.hass = this.hass;
+    }
+    if (changed.has("_renderedConfig")) {
+      void this._ensureNativeWeatherRow();
+    }
     this._bindActionElements();
+  }
+
+  private async _ensureNativeWeatherRow(): Promise<void> {
+    const config = this._renderedConfig;
+    const entity = config.entity;
+    const shouldUseNativeWeather =
+      isTrue(config.native_icon) &&
+      typeof entity === "string" &&
+      entity.startsWith("weather.") &&
+      config.icon === undefined &&
+      config.image === undefined;
+
+    if (!shouldUseNativeWeather) {
+      this._nativeWeatherGeneration++;
+      this._nativeWeatherEntity = undefined;
+      this._nativeWeatherRow = undefined;
+      return;
+    }
+    if (this._nativeWeatherRow && this._nativeWeatherEntity === entity) {
+      this._nativeWeatherRow.hass = this.hass;
+      return;
+    }
+
+    const generation = ++this._nativeWeatherGeneration;
+    try {
+      const helpers = await (window as any).loadCardHelpers();
+      const row = await helpers.createRowElement({ entity });
+      if (generation !== this._nativeWeatherGeneration) return;
+
+      row.hass = this.hass;
+      this._nativeWeatherEntity = entity;
+      this._nativeWeatherRow = row;
+    } catch (error) {
+      if (generation !== this._nativeWeatherGeneration) return;
+      console.warn("Unable to load Home Assistant's native weather row", error);
+    }
   }
 
   protected async firstUpdated(): Promise<void> {
@@ -229,6 +274,10 @@ class TemplateEntityRow extends LitElement {
       isTrue(config.native_icon) &&
       config.icon === undefined &&
       config.image === undefined;
+    const useNativeWeatherIcon =
+      useNativeIcon &&
+      typeof config.entity === "string" &&
+      config.entity.startsWith("weather.");
     const iconColor =
       config.color ?? (useNativeIcon && stateColor ? "state" : undefined);
     const hasAction = Boolean(
@@ -239,16 +288,31 @@ class TemplateEntityRow extends LitElement {
     );
     return html`
       <div id="wrapper">
-        <state-badge
-          .hass=${this.hass}
-          .stateObj=${entity}
-          @action=${this._handleAction}
-          .overrideIcon=${useNativeIcon ? undefined : icon}
-          .overrideImage=${useNativeIcon ? undefined : config.image}
-          .color=${iconColor}
-          class=${classMap({ icon: true, pointer: hasAction })}
-          .stateColor=${stateColor}
-        ></state-badge>
+        ${useNativeWeatherIcon && this._nativeWeatherRow
+          ? html`
+              <div
+                class=${classMap({
+                  icon: true,
+                  "native-weather-icon": true,
+                  pointer: hasAction,
+                })}
+                @action=${this._handleAction}
+              >
+                ${this._nativeWeatherRow ?? nothing}
+              </div>
+            `
+          : html`
+              <state-badge
+                .hass=${this.hass}
+                .stateObj=${entity}
+                @action=${this._handleAction}
+                .overrideIcon=${useNativeIcon ? undefined : icon}
+                .overrideImage=${useNativeIcon ? undefined : config.image}
+                .color=${iconColor}
+                class=${classMap({ icon: true, pointer: hasAction })}
+                .stateColor=${stateColor}
+              ></state-badge>
+            `}
         <div
           class=${classMap({ info: true, pointer: hasAction })}
           @action=${this._handleAction}
@@ -291,6 +355,17 @@ class TemplateEntityRow extends LitElement {
       }
       .icon {
         flex: 0 0 40px;
+      }
+      .native-weather-icon {
+        height: 40px;
+        overflow: hidden;
+        width: 40px;
+      }
+      .native-weather-icon hui-weather-entity-row {
+        display: block;
+        min-width: 320px;
+        pointer-events: none;
+        width: 320px;
       }
       .info {
         flex: 1 1 30%;

@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.0.0-beta.5
+
+- Render weather entities with Home Assistant's layered native weather artwork
+  when `native_icon` is enabled.
+- Use Home Assistant\'s template editor for all template fields.
+- Move tap, hold and double-tap actions into a compact Interactions section
+  that is collapsed by default.
+
 ## 2.0.0-beta.4
 
 - Fix `native_icon` so it uses Home Assistant's state-aware icon together with

@@ -19,6 +19,7 @@ const LABELS: Record<string, string> = {
   double_tap_action: "Double-tap action",
 };
 
+const templateSelector = () => ({ template: {} });
 const textSelector = (multiline = false) => ({
   text: multiline ? { multiline: true } : {},
 });
@@ -26,32 +27,29 @@ const textSelector = (multiline = false) => ({
 class TemplateEntityRowEditor extends LitElement {
   @property({ attribute: false }) hass: any;
   @state() private _config: Record<string, any> = {};
+  @state() private _interactionsExpanded = false;
 
   setConfig(config: Record<string, any>): void {
     this._config = { ...config };
   }
 
-  private get _schema(): any[] {
+  private get _mainSchema(): any[] {
     const entitySelector = hasTemplate(this._config.entity)
-      ? textSelector(true)
+      ? templateSelector()
       : { entity: {} };
-    const actionSelector = (key: string) =>
-      typeof this._config[key] === "string"
-        ? textSelector(true)
-        : { ui_action: {} };
     const booleanOrTemplateSelector = (key: string) =>
       typeof this._config[key] === "string"
-        ? textSelector(true)
+        ? templateSelector()
         : { boolean: {} };
 
     return [
       { name: "entity", selector: entitySelector },
-      { name: "name", selector: textSelector(true) },
-      { name: "icon", selector: textSelector(true) },
-      { name: "state", selector: textSelector(true) },
-      { name: "secondary", selector: textSelector(true) },
-      { name: "image", selector: textSelector(true) },
-      { name: "color", selector: textSelector(true) },
+      { name: "name", selector: templateSelector() },
+      { name: "icon", selector: templateSelector() },
+      { name: "state", selector: templateSelector() },
+      { name: "secondary", selector: templateSelector() },
+      { name: "image", selector: templateSelector() },
+      { name: "color", selector: templateSelector() },
       { name: "active", selector: booleanOrTemplateSelector("active") },
       {
         name: "condition",
@@ -59,6 +57,16 @@ class TemplateEntityRowEditor extends LitElement {
       },
       { name: "toggle", selector: booleanOrTemplateSelector("toggle") },
       { name: "native_icon", selector: { boolean: {} } },
+    ];
+  }
+
+  private get _interactionSchema(): any[] {
+    const actionSelector = (key: string) =>
+      typeof this._config[key] === "string"
+        ? textSelector(true)
+        : { ui_action: {} };
+
+    return [
       { name: "tap_action", selector: actionSelector("tap_action") },
       { name: "hold_action", selector: actionSelector("hold_action") },
       {
@@ -74,20 +82,45 @@ class TemplateEntityRowEditor extends LitElement {
       <ha-form
         .hass=${this.hass}
         .data=${this._config}
-        .schema=${this._schema}
-        .computeLabel=${(schema: { name: string }) =>
-          LABELS[schema.name] ?? schema.name}
+        .schema=${this._mainSchema}
+        .computeLabel=${this._computeLabel}
         @value-changed=${this._valueChanged}
       ></ha-form>
-      <p>
-        Fields containing Jinja templates remain editable as multiline text.
-        Standard actions use Home Assistant's action editor.
-      </p>
+
+      <ha-expansion-panel
+        outlined
+        .expanded=${this._interactionsExpanded}
+        @expanded-changed=${this._expandedChanged}
+      >
+        <div slot="header" class="expansion-header">
+          <ha-icon icon="mdi:gesture-tap"></ha-icon>
+          <span>Interactions</span>
+        </div>
+        <div class="interaction-content">
+          <ha-form
+            .hass=${this.hass}
+            .data=${this._config}
+            .schema=${this._interactionSchema}
+            .computeLabel=${this._computeLabel}
+            @value-changed=${this._valueChanged}
+          ></ha-form>
+        </div>
+      </ha-expansion-panel>
     `;
+  }
+
+  private _computeLabel = (schema: { name: string }): string =>
+    LABELS[schema.name] ?? schema.name;
+
+  private _expandedChanged(event: CustomEvent): void {
+    this._interactionsExpanded = Boolean(
+      event.detail?.expanded ?? (event.target as any).expanded
+    );
   }
 
   private _valueChanged(event: CustomEvent): void {
     const config = {
+      ...this._config,
       ...event.detail.value,
       type: "custom:template-entity-row",
     };
@@ -108,11 +141,18 @@ class TemplateEntityRowEditor extends LitElement {
     ha-form {
       display: block;
     }
-    p {
-      color: var(--secondary-text-color);
-      font-size: 0.875rem;
-      line-height: 1.4;
-      margin: 16px 0 0;
+    ha-expansion-panel {
+      display: block;
+      margin-top: 16px;
+    }
+    .expansion-header {
+      align-items: center;
+      display: flex;
+      font-weight: 500;
+      gap: 12px;
+    }
+    .interaction-content {
+      padding: 0 16px 16px;
     }
   `;
 }
