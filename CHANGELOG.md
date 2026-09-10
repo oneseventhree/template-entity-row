@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0-beta.10
+
+- Move Show entity toggle to the top of More options, above the native icon
+  control.
+- Move the less frequently used Image template into More options after Icon
+  appearance.
+
 ## 2.0.0-beta.9
 
 - Put Interactions in its own collapsed expansion panel inside More options so

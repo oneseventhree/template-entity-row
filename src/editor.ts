@@ -51,7 +51,6 @@ class TemplateEntityRowEditor extends LitElement {
       { name: "icon", selector: templateSelector() },
       { name: "state", selector: templateSelector() },
       { name: "secondary", selector: templateSelector() },
-      { name: "image", selector: templateSelector() },
       { name: "color", selector: templateSelector() },
     ];
   }
@@ -72,10 +71,11 @@ class TemplateEntityRowEditor extends LitElement {
           };
 
     return [
+      { name: "toggle", selector: { boolean: {} } },
       { name: "native_icon", selector: { boolean: {} } },
       { name: "active", selector: activeSelector },
+      { name: "image", selector: templateSelector() },
       { name: "condition", selector: templateSelector() },
-      { name: "toggle", selector: { boolean: {} } },
     ];
   }
 
