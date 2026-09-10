@@ -69,7 +69,7 @@ jobs:
             exit 0
           fi
           TAG="v${VERSION}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" >/dev/null 2>&1; then
             echo "$TAG already exists"
           else
             gh release create "$TAG" \
@@ -96,7 +96,7 @@ jobs:
         run: |
           VERSION="$(node -p "require('./package.json').version")"
           TAG="v${VERSION}"
-          if gh release view "$TAG" >/dev/null 2>&1; then
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" >/dev/null 2>&1; then
             echo "$TAG already exists"
           else
             gh release create "$TAG" \
