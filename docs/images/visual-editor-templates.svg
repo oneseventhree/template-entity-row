@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1120" viewBox="0 0 1000 1120" role="img" aria-labelledby="title desc">
+  <title id="title">Fictional Template Entity Row editor</title>
+  <desc id="desc">A mock Home Assistant editor using demo entities and values.</desc>
+  <rect width="1000" height="1120" fill="#171717"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <g transform="translate(24 24)">
+      <text x="16" y="30" fill="#aaaaaa" font-size="20">Entity</text>
+      <rect x="0" y="48" width="952" height="92" rx="8" fill="#343434"/>
+      <text x="24" y="104" fill="#eeeeee" font-size="27">weather.demo_home</text>
+      <path d="M905 84l10 10 10-10" fill="none" stroke="#aaa" stroke-width="3"/>
+    </g>
+    <g transform="translate(24 190)">
+      <text x="16" y="30" fill="#dddddd" font-size="27">Name template</text>
+      <rect x="0" y="48" width="952" height="190" rx="8" fill="#292929"/>
+      <rect x="0" y="48" width="952" height="48" rx="8" fill="#252525"/>
+      <text x="24" y="81" fill="#9e9e9e" font-size="17">TEMPLATE EDITOR</text>
+      <text x="24" y="136" fill="#eeeeee" font-size="24">Demo Home: {{ state_translated('weather.demo_home') | title }}</text>
+      <text x="24" y="180" fill="#eeeeee" font-size="24">{% if is_state('sun.sun', 'above_horizon') %}</text>
+      <text x="48" y="220" fill="#eeeeee" font-size="24">Daytime{% else %}Night-time{% endif %}</text>
+    </g>
+    <g transform="translate(24 468)">
+      <text x="16" y="30" fill="#dddddd" font-size="27">Icon template</text>
+      <rect x="0" y="48" width="952" height="145" rx="8" fill="#292929"/>
+      <rect x="0" y="48" width="952" height="48" rx="8" fill="#252525"/>
+      <text x="24" y="81" fill="#9e9e9e" font-size="17">TEMPLATE EDITOR</text>
+      <text x="24" y="148" fill="#eeeeee" font-size="24">{{ 'mdi:weather-sunny' if is_state('sun.sun', 'above_horizon')</text>
+      <text x="48" y="180" fill="#eeeeee" font-size="24">else 'mdi:weather-night' }}</text>
+    </g>
+    <g transform="translate(24 704)">
+      <text x="16" y="30" fill="#dddddd" font-size="27">State template</text>
+      <rect x="0" y="48" width="952" height="124" rx="8" fill="#292929"/>
+      <rect x="0" y="48" width="952" height="48" rx="8" fill="#252525"/>
+      <text x="24" y="81" fill="#9e9e9e" font-size="17">TEMPLATE EDITOR</text>
+      <text x="24" y="146" fill="#eeeeee" font-size="25">{{ states('sensor.demo_temperature') }} °C</text>
+    </g>
+    <g transform="translate(24 918)">
+      <text x="16" y="30" fill="#dddddd" font-size="27">Secondary information template</text>
+      <rect x="0" y="48" width="952" height="124" rx="8" fill="#292929"/>
+      <rect x="0" y="48" width="952" height="48" rx="8" fill="#252525"/>
+      <text x="24" y="81" fill="#9e9e9e" font-size="17">TEMPLATE EDITOR</text>
+      <text x="24" y="146" fill="#eeeeee" font-size="25">Humidity: {{ states('sensor.demo_humidity') }}%</text>
+    </g>
+  </g>
+</svg>
+

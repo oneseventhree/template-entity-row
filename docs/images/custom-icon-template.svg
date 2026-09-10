@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="130" viewBox="0 0 940 130" role="img" aria-labelledby="title desc">
+  <title id="title">Fictional custom door icon row</title>
+  <desc id="desc">A mock entity row using a dynamic custom door icon.</desc>
+  <rect width="940" height="130" fill="#191919"/>
+  <g transform="translate(38 25)" fill="none" stroke="#4e83af" stroke-width="4">
+    <rect x="0" y="0" width="54" height="76" rx="2"/>
+    <path d="M27 0v76M6 8l21 7v53L6 70z"/>
+    <circle cx="22" cy="42" r="2" fill="#4e83af"/>
+  </g>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <text x="130" y="72" fill="#eeeeee" font-size="29">Patio Door</text>
+    <text x="855" y="72" fill="#eeeeee" font-size="27" text-anchor="end">Closed</text>
+  </g>
+</svg>
+
