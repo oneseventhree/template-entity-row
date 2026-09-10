@@ -110,10 +110,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release list --limit 100 --json tagName,isPrerelease \
-            --jq '.[] | select(.isPrerelease) | .tagName' |
-          while read -r TAG; do
-            [ -z "$TAG" ] && continue
-            gh release delete "$TAG" --cleanup-tag --yes
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq '.[] | select(.prerelease) | [.id, .tag_name] | @tsv' |
+          while IFS=$'\t' read -r RELEASE_ID TAG; do
+            [ -z "$RELEASE_ID" ] && continue
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}"
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/git/refs/tags/${TAG}" || true
           done
           fi
