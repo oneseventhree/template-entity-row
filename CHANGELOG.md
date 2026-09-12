@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1-beta-02
+
+- Place Icon colour template directly below Icon template in the visual editor.
+
 ## 1.0.1-beta-01
 
 - Use Home Assistant's standard native icon automatically for ordinary entity
