@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1-beta-01
+
+- Use Home Assistant's standard native icon automatically for ordinary entity
+  domains when no custom icon or image is configured.
+- Replace the general native-icon switch with a Weather icon style dropdown
+  shown only for eligible `weather.*` entities.
+- Offer Layered artwork and Standard icon choices while retaining the existing
+  `native_icon` YAML setting for backward compatibility.
+- Hide the weather-specific choice when a custom icon or image takes priority.
+
 ## 1.0.0
 
 - Add a full Home Assistant visual editor while preserving existing YAML
@@ -27,4 +37,3 @@
   vulnerabilities and add automated build and HACS validation.
 - Add HACS installation and migration guidance, fictional interface mockups,
   configuration defaults and tested YAML examples.
-

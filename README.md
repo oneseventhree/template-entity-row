@@ -135,9 +135,9 @@ entities:
 
 ### Native weather icon
 
-Native Home Assistant icons are enabled by default. For weather entities, this
-uses Home Assistant's layered weather artwork when neither `icon` nor `image`
-is configured.
+Home Assistant's standard native icon is automatic whenever neither `icon` nor
+`image` is configured. Weather entities additionally provide a **Weather icon
+style** choice between layered artwork and the standard icon.
 
 ```yaml
 type: custom:template-entity-row
@@ -216,7 +216,7 @@ The main editor contains:
 The collapsed **More options** panel contains, in this order:
 
 1. Show entity toggle
-2. Use native Home Assistant icon
+2. Weather icon style, shown only for eligible `weather.*` entities
 3. Icon appearance
 4. Visibility condition template
 5. Image template
@@ -237,7 +237,7 @@ between visual and YAML editing does not discard advanced settings.
 | `secondary` | Text or template | None | Secondary text below the name |
 | `color` | Colour or template | Entity state colour | Custom icon colour |
 | `toggle` | Boolean or template | `false` | Replaces the state text with an entity toggle when true |
-| `native_icon` | Boolean or template | `true` | Uses Home Assistant's state-aware icon when `icon` and `image` are unset |
+| `native_icon` | Boolean or template | `true` | Uses layered artwork for weather entities when true and the standard icon when false; retained for YAML compatibility |
 | `active` | Boolean or template | Automatic | Controls whether the icon uses its active appearance |
 | `condition` | Boolean or template | Visible | Shows the row when true and hides it when false |
 | `image` | URL or template | None | Entity picture; overrides the native icon |
@@ -260,9 +260,9 @@ The visual editor's **Icon appearance** field has three modes:
 - **Active** forces the active icon appearance.
 - **Inactive** forces the inactive icon appearance.
 
-For native weather artwork, leave `icon` and `image` empty and keep
-`native_icon` enabled. For dynamic custom icons, configure `icon` with a
-template instead.
+For native weather artwork, leave `icon` and `image` empty and select **Layered
+artwork**. Select **Standard icon** for the normal Home Assistant weather glyph.
+For dynamic custom icons, configure `icon` with a template instead.
 
 ## Development
 

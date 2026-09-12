@@ -13,7 +13,7 @@ const LABELS: Record<string, string> = {
   active: "Icon appearance",
   condition: "Visibility condition template",
   toggle: "Show entity toggle",
-  native_icon: "Use native Home Assistant icon",
+  native_icon: "Weather icon style",
   tap_action: "Tap action",
   hold_action: "Hold action",
   double_tap_action: "Double-tap action",
@@ -31,7 +31,7 @@ class TemplateEntityRowEditor extends LitElement {
   @state() private _interactionsExpanded = false;
 
   setConfig(config: Record<string, any>): void {
-    const next: Record<string, any> = { native_icon: true, ...config };
+    const next: Record<string, any> = { ...config };
     if (next.condition === true) {
       delete next.condition;
     } else if (next.condition === false) {
@@ -70,28 +70,70 @@ class TemplateEntityRowEditor extends LitElement {
             },
           };
 
-    return [
+    const schema: any[] = [
       { name: "toggle", selector: { boolean: {} } },
-      { name: "native_icon", selector: { boolean: {} } },
+    ];
+
+    if (this._showWeatherIconStyle) {
+      schema.push({
+        name: "native_icon",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "layered", label: "Layered artwork" },
+              { value: "standard", label: "Standard icon" },
+            ],
+          },
+        },
+      });
+    }
+
+    schema.push(
       { name: "active", selector: activeSelector },
       { name: "condition", selector: templateSelector() },
-      { name: "image", selector: templateSelector() },
-    ];
+      { name: "image", selector: templateSelector() }
+    );
+
+    return schema;
+  }
+
+  private get _showWeatherIconStyle(): boolean {
+    const entity = this._config.entity;
+    const hasCustomIcon =
+      this._config.icon !== undefined &&
+      String(this._config.icon).trim() !== "";
+    const hasCustomImage =
+      this._config.image !== undefined &&
+      String(this._config.image).trim() !== "";
+
+    return (
+      typeof entity === "string" &&
+      !hasTemplate(entity) &&
+      entity.trim().startsWith("weather.") &&
+      !hasTemplate(this._config.native_icon) &&
+      !hasCustomIcon &&
+      !hasCustomImage
+    );
   }
 
   private get _moreOptionsData(): Record<string, any> {
-    if (typeof this._config.active === "string") {
-      return this._config;
-    }
-    return {
+    const data: Record<string, any> = {
       ...this._config,
       active:
-        this._config.active === undefined
+        typeof this._config.active === "string"
+          ? this._config.active
+          : this._config.active === undefined
           ? "automatic"
           : this._config.active
             ? "active"
             : "inactive",
     };
+    if (this._showWeatherIconStyle) {
+      data.native_icon =
+        this._config.native_icon === false ? "standard" : "layered";
+    }
+    return data;
   }
 
   private get _interactionSchema(): any[] {
@@ -193,6 +235,14 @@ class TemplateEntityRowEditor extends LitElement {
   private _moreOptionsValueChanged(event: CustomEvent): void {
     const value = { ...event.detail.value };
     const remove: string[] = [];
+    if (this._showWeatherIconStyle) {
+      if (value.native_icon === "standard") {
+        value.native_icon = false;
+      } else if (value.native_icon === "layered") {
+        delete value.native_icon;
+        remove.push("native_icon");
+      }
+    }
     if (typeof this._config.active !== "string") {
       if (value.active === "automatic") {
         delete value.active;
