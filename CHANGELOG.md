@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1-beta-03
+
+- Keep Icon template and Icon colour template together below Secondary
+  information template in the visual editor.
+
 ## 1.0.1-beta-02
 
 - Place Icon colour template directly below Icon template in the visual editor.

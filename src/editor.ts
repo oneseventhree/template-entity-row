@@ -48,10 +48,10 @@ class TemplateEntityRowEditor extends LitElement {
     return [
       { name: "entity", selector: entitySelector },
       { name: "name", selector: templateSelector() },
-      { name: "icon", selector: templateSelector() },
-      { name: "color", selector: templateSelector() },
       { name: "state", selector: templateSelector() },
       { name: "secondary", selector: templateSelector() },
+      { name: "icon", selector: templateSelector() },
+      { name: "color", selector: templateSelector() },
     ];
   }
 

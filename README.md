@@ -208,10 +208,10 @@ The main editor contains:
 
 - Entity
 - Name template
-- Icon template
-- Icon colour template
 - State template
 - Secondary information template
+- Icon template
+- Icon colour template
 
 The collapsed **More options** panel contains, in this order:
 

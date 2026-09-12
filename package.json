@@ -1,7 +1,7 @@
 {
   "name": "template-entity-row",
   "private": true,
-  "version": "1.0.1-beta-02",
+  "version": "1.0.1-beta-03",
   "type": "module",
   "description": "Display templates in a Home Assistant entities card row",
   "scripts": {
