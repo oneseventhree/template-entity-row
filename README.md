@@ -14,14 +14,14 @@ This project is based on
 and remains available under the original MIT licence. This fork is independently
 maintained and is not maintained by the original author.
 
-## What changed in v1.0.0
+## What changed in the maintained fork
 
 | Area | Updated fork |
 | --- | --- |
 | Editing | Full visual editor inside the Home Assistant Entities card editor |
 | Templates | Multiline template inputs for all display fields without briefly showing raw Jinja while loading |
 | Icons | Reliable dynamic custom icons, including `phu:`, plus native state-aware Home Assistant icons by default |
-| Weather | Home Assistant's layered native weather artwork rather than a monochrome fallback icon |
+| Weather | Choice of Home Assistant's layered weather artwork or standard icon |
 | Performance | Template subscriptions start concurrently and are safely replaced or removed when configuration changes |
 | Layout | Less-used controls live in a collapsed **More options** panel, with actions in a nested **Interactions** panel |
 | Actions | Home Assistant action selectors for tap, hold and double-tap actions, with template support retained |

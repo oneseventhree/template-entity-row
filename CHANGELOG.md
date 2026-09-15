@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.1
+
+- Use Home Assistant's standard native icon automatically for ordinary entity
+  domains when no custom icon or image is configured.
+- Add a Weather icon style dropdown for eligible `weather.*` entities, with
+  Layered artwork and Standard icon choices.
+- Retain the existing `native_icon` YAML setting for backward compatibility.
+- Hide the weather-specific choice when a custom icon or image takes priority.
+- Keep Icon template and Icon colour template together below Secondary
+  information template in the visual editor.
+
 ## 1.0.1-beta-03
 
 - Keep Icon template and Icon colour template together below Secondary
