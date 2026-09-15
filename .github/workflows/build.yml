@@ -97,11 +97,6 @@ jobs:
         run: |
           VERSION="$(node -p "require('./package.json').version")"
           TAG="v${VERSION}"
-          if [[ "$VERSION" == "1.0.0" ]]; then
-            for OLD_TAG in v1.0.0 v1.0.1 v1.0.1-beta-01 v1.0.1-beta-02 v1.0.1-beta-03; do
-              gh release delete "$OLD_TAG" --cleanup-tag --yes >/dev/null 2>&1 || true
-            done
-          fi
           if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" >/dev/null 2>&1; then
             echo "$TAG already exists"
           else
