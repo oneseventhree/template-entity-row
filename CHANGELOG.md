@@ -1,35 +1,5 @@
 # Changelog
 
-## 1.0.1
-
-- Use Home Assistant's standard native icon automatically for ordinary entity
-  domains when no custom icon or image is configured.
-- Add a Weather icon style dropdown for eligible `weather.*` entities, with
-  Layered artwork and Standard icon choices.
-- Retain the existing `native_icon` YAML setting for backward compatibility.
-- Hide the weather-specific choice when a custom icon or image takes priority.
-- Keep Icon template and Icon colour template together below Secondary
-  information template in the visual editor.
-
-## 1.0.1-beta-03
-
-- Keep Icon template and Icon colour template together below Secondary
-  information template in the visual editor.
-
-## 1.0.1-beta-02
-
-- Place Icon colour template directly below Icon template in the visual editor.
-
-## 1.0.1-beta-01
-
-- Use Home Assistant's standard native icon automatically for ordinary entity
-  domains when no custom icon or image is configured.
-- Replace the general native-icon switch with a Weather icon style dropdown
-  shown only for eligible `weather.*` entities.
-- Offer Layered artwork and Standard icon choices while retaining the existing
-  `native_icon` YAML setting for backward compatibility.
-- Hide the weather-specific choice when a custom icon or image takes priority.
-
 ## 1.0.0
 
 - Add a full Home Assistant visual editor while preserving existing YAML
@@ -42,13 +12,18 @@
   trim template output before rendering the icon.
 - Enable native Home Assistant icons by default when no custom icon or image is
   configured.
-- Render weather entities with Home Assistant's layered native weather artwork.
+- Add a Weather icon style dropdown for eligible `weather.*` entities, with
+  Layered artwork and Standard icon choices.
+- Retain the existing `native_icon` YAML setting for backward compatibility and
+  hide the weather-specific choice when a custom icon or image takes priority.
 - Prevent raw templates from appearing while rows initialise.
 - Load each row's template subscriptions concurrently and safely clean up or
   replace subscriptions when configuration changes.
 - Add a compact More options panel in the final order: entity toggle, native
   icon, icon appearance, visibility condition and image template.
 - Add a separately collapsible Interactions panel inside More options.
+- Keep Icon template and Icon colour template together below Secondary
+  information template in the visual editor.
 - Replace ambiguous active and visibility switches with controls that preserve
   the original automatic, active, inactive and conditional behavior.
 - Correct boolean template handling, full-row hiding and double-tap detection.
