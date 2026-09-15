@@ -17,6 +17,7 @@ const OPTIONS = [
   "image",
   "entity",
   "native_icon",
+  "state_color",
   "color",
   "toggle",
   "tap_action",
@@ -32,6 +33,7 @@ const TRIMMED_OPTIONS = new Set([
   "active",
   "condition",
   "native_icon",
+  "state_color",
   "toggle",
 ]);
 
@@ -77,7 +79,7 @@ class TemplateEntityRow extends LitElement {
 
   private _subscriptions: Array<() => Promise<void>> = [];
   private _bindGeneration = 0;
-  private _actionHandler?: (event: Event) => void;
+  private _lastReportedVisibility?: boolean;
   private _nativeWeatherGeneration = 0;
   private _nativeWeatherEntity?: string;
   @state() private _nativeWeatherRow?: any;
@@ -93,11 +95,13 @@ class TemplateEntityRow extends LitElement {
     }
     this._sourceConfig = { ...config };
     this._renderedConfig = initialRenderedConfig(config);
+    this._updateVisibility(this._renderedConfig.condition);
     void this._bindTemplates();
   }
 
   connectedCallback(): void {
     super.connectedCallback();
+    queueMicrotask(() => this._reportVisibility());
     if (Object.keys(this._sourceConfig).length && !this._subscriptions.length) {
       void this._bindTemplates();
     }
@@ -105,17 +109,13 @@ class TemplateEntityRow extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+    this._bindGeneration++;
+    this._lastReportedVisibility = undefined;
     void this._clearSubscriptions();
   }
 
   protected updated(changed: Map<PropertyKey, unknown>): void {
-    if (changed.has("_renderedConfig")) {
-      const condition = this._renderedConfig.condition;
-      const hasCondition =
-        condition !== undefined &&
-        String(condition).trim() !== "";
-      this.hidden = hasCondition && !isTrue(condition);
-    }
+    if (changed.has("hidden")) this._reportVisibility();
     if (changed.has("hass") && this._nativeWeatherRow) {
       this._nativeWeatherRow.hass = this.hass;
     }
@@ -161,15 +161,6 @@ class TemplateEntityRow extends LitElement {
     }
   }
 
-  protected async firstUpdated(): Promise<void> {
-    const genericRow = this.shadowRoot?.querySelector(
-      "#staging hui-generic-entity-row"
-    ) as any;
-    if (!genericRow) return;
-    await genericRow.updateComplete;
-    this._actionHandler = genericRow._handleAction?.bind(genericRow);
-  }
-
   private async _clearSubscriptions(): Promise<void> {
     const subscriptions = this._subscriptions.splice(0);
     await Promise.allSettled(subscriptions.map((unsubscribe) => unsubscribe()));
@@ -178,8 +169,9 @@ class TemplateEntityRow extends LitElement {
   private async _bindTemplates(): Promise<void> {
     const generation = ++this._bindGeneration;
     await this._clearSubscriptions();
+    if (!this.isConnected) return;
     const hs = await getHass();
-    if (generation !== this._bindGeneration) return;
+    if (generation !== this._bindGeneration || !this.isConnected) return;
 
     const subscriptions = await Promise.all(
       OPTIONS.map(async (key) => {
@@ -191,14 +183,21 @@ class TemplateEntityRow extends LitElement {
           return undefined;
         }
 
-        return subscribeTemplate(
-          source,
-          { config: this._sourceConfig },
-          (value) => {
-            if (generation !== this._bindGeneration) return;
-            this._setRenderedValue(key, normaliseValue(key, value, hs));
+        try {
+          return await subscribeTemplate(
+            source,
+            { config: this._sourceConfig },
+            (value) => {
+              if (generation !== this._bindGeneration) return;
+              this._setRenderedValue(key, normaliseValue(key, value, hs));
+            }
+          );
+        } catch (error) {
+          if (generation === this._bindGeneration) {
+            console.warn(`Unable to render template-entity-row ${key}`, error);
           }
-        );
+          return undefined;
+        }
       })
     );
 
@@ -217,28 +216,74 @@ class TemplateEntityRow extends LitElement {
 
   private _setRenderedValue(key: string, value: unknown): void {
     this._renderedConfig = { ...this._renderedConfig, [key]: value };
+    if (key === "condition") this._updateVisibility(value);
   }
 
-  private _handleAction = (event: Event): void => {
-    this._actionHandler?.(event);
+  private _updateVisibility(condition: unknown): void {
+    const hasCondition =
+      condition !== undefined && String(condition).trim() !== "";
+    this.hidden = hasCondition && !isTrue(condition);
+  }
+
+  private _reportVisibility(): void {
+    if (!this.isConnected) return;
+    const visible = !this.hidden;
+    if (visible === this._lastReportedVisibility) return;
+    this._lastReportedVisibility = visible;
+    this.dispatchEvent(
+      new CustomEvent("row-visibility-changed", {
+        detail: { row: this, value: visible },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  private _handleAction = (event: CustomEvent): void => {
+    const action = event.detail?.action;
+    if (!action) return;
+    this.dispatchEvent(
+      new CustomEvent("hass-action", {
+        detail: { config: this._renderedConfig, action },
+        bubbles: true,
+        composed: true,
+      })
+    );
   };
 
   private _bindActionElements(): void {
     const config = this._renderedConfig;
-    if (
-      !config.entity &&
-      !config.tap_action &&
-      !config.hold_action &&
-      !config.double_tap_action
-    ) {
-      return;
-    }
+    const hasAction = this._hasAction(config);
     const options = {
-      hasHold: config.hold_action !== undefined,
-      hasDoubleClick: config.double_tap_action !== undefined,
+      hasHold: this._actionEnabled(config.hold_action),
+      hasDoubleClick: this._actionEnabled(config.double_tap_action),
+      disabled: !hasAction,
     };
     bindActionHandler(this.shadowRoot?.querySelector(".icon") ?? null, options);
     bindActionHandler(this.shadowRoot?.querySelector(".info") ?? null, options);
+    bindActionHandler(this.shadowRoot?.querySelector(".state") ?? null, {
+      ...options,
+      disabled: !hasAction || isTrue(config.toggle),
+    });
+  }
+
+  private _actionEnabled(action: unknown, fallback = false): boolean {
+    if (action === undefined) return fallback;
+    if (action && typeof action === "object") {
+      return (
+        String((action as Record<string, unknown>).action).toLowerCase() !==
+        "none"
+      );
+    }
+    return String(action).trim().toLowerCase() !== "none";
+  }
+
+  private _hasAction(config: Record<string, any>): boolean {
+    return (
+      this._actionEnabled(config.tap_action, Boolean(config.entity)) ||
+      this._actionEnabled(config.hold_action) ||
+      this._actionEnabled(config.double_tap_action)
+    );
   }
 
   protected render() {
@@ -263,7 +308,12 @@ class TemplateEntityRow extends LitElement {
       config.name ?? entity.attributes?.friendly_name ?? entity.entity_id;
     const state = config.state ?? base?.state;
     const active = isTrue(config.active);
-    const stateColor = config.active === undefined ? true : active;
+    const stateColor =
+      config.active !== undefined
+        ? active
+        : config.state_color !== undefined
+          ? isTrue(config.state_color)
+          : true;
 
     if (active) {
       entity.attributes.brightness = 255;
@@ -282,12 +332,7 @@ class TemplateEntityRow extends LitElement {
       (config.native_icon === undefined || isTrue(config.native_icon));
     const iconColor =
       config.color ?? (useNativeIcon && stateColor ? "state" : undefined);
-    const hasAction = Boolean(
-      config.entity ||
-        config.tap_action ||
-        config.hold_action ||
-        config.double_tap_action
-    );
+    const hasAction = this._hasAction(config);
     return html`
       <div id="wrapper">
         ${useNativeWeatherIcon && this._nativeWeatherRow
@@ -324,7 +369,10 @@ class TemplateEntityRow extends LitElement {
             ? html`<div class="secondary">${config.secondary}</div>`
             : nothing}
         </div>
-        <div class="state">
+        <div
+          class=${classMap({ state: true, pointer: hasAction && !showToggle })}
+          @action=${showToggle ? nothing : this._handleAction}
+        >
           ${showToggle
             ? html`
                 <ha-entity-toggle .hass=${this.hass} .stateObj=${entity}>
@@ -333,16 +381,10 @@ class TemplateEntityRow extends LitElement {
             : state}
         </div>
       </div>
-      <div id="staging">
-        <hui-generic-entity-row .hass=${this.hass} .config=${config}>
-        </hui-generic-entity-row>
-      </div>
     `;
   }
 
-  static styles = [
-    (customElements.get("hui-generic-entity-row") as any)?.styles,
-    css`
+  static styles = css`
       :host {
         display: block;
       }
@@ -389,11 +431,7 @@ class TemplateEntityRow extends LitElement {
       .pointer {
         cursor: pointer;
       }
-      #staging {
-        display: none;
-      }
-    `,
-  ];
+    `;
 }
 
 if (!customElements.get("template-entity-row")) {

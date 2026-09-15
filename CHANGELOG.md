@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.0.1-beta-01
+
+- Audit all 119 issues from the original repository and exclude feature
+  requests, unsupported native controls, configuration questions and reports
+  already fixed in the maintained version.
+- Replace the private hidden-row action handler with Home Assistant's current
+  `hass-action` event contract for reliable tap, hold and double-tap actions.
+- Fix templated hold actions on touch devices and double-tap handling reported
+  in upstream issues #67 and #125.
+- Respect explicit `state_color: true` and `state_color: false` settings while
+  retaining state-aware icons by default, covering upstream issues #123, #126
+  and #136.
+- Notify the Entities card whenever a conditional row becomes visible or
+  hidden, preventing the blank gaps reported in upstream issue #138.
+- Remove the load-time dependency on private `hui-generic-entity-row` styles,
+  preventing the early-load failure reported in upstream issues #64 and #108.
+- Make template subscription failures independent and cancel pending work when
+  a row is disconnected.
+
 ## 1.0.0
 
 - Add a full Home Assistant visual editor while preserving existing YAML

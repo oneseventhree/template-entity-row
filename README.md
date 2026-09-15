@@ -241,6 +241,7 @@ between visual and YAML editing does not discard advanced settings.
 | `state` | Text or template | Entity state | State text shown on the right |
 | `secondary` | Text or template | None | Secondary text below the name |
 | `color` | Colour or template | Entity state colour | Custom icon colour |
+| `state_color` | Boolean or template | `true` | Enables or disables the entity's state-aware icon colour |
 | `toggle` | Boolean or template | `false` | Replaces the state text with an entity toggle when true |
 | `native_icon` | Boolean or template | `true` | Uses layered artwork for weather entities when true and the standard icon when false; retained for YAML compatibility |
 | `active` | Boolean or template | Automatic | Controls whether the icon uses its active appearance |
