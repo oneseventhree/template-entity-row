@@ -10,9 +10,14 @@ rendering, native Home Assistant icons and modern compatibility while keeping
 existing `custom:template-entity-row` YAML working.
 
 This project is based on
-[Thomas Lovén's original `lovelace-template-entity-row`](https://github.com/thomasloven/lovelace-template-entity-row)
-and remains available under the original MIT licence. This fork is independently
-maintained and is not maintained by the original author.
+[Thomas Lovén's original `lovelace-template-entity-row`](https://github.com/thomasloven/lovelace-template-entity-row).
+This fork is independently maintained and is not maintained by the original
+author.
+
+Template Entity Row can now be configured directly in Home Assistant's visual
+Entities card editor. It also adds multiline templates, native icons, layered
+weather artwork, reliable custom icons, compact controls and faster loading.
+Existing `custom:template-entity-row` YAML remains fully supported.
 
 ## What changed in the maintained fork
 
