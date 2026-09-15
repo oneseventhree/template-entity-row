@@ -97,9 +97,6 @@ jobs:
         run: |
           VERSION="$(node -p "require('./package.json').version")"
           TAG="v${VERSION}"
-          if [[ "$VERSION" == "1.0.0" ]]; then
-            gh release delete "$TAG" --cleanup-tag --yes >/dev/null 2>&1 || true
-          fi
           if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${TAG}" >/dev/null 2>&1; then
             echo "$TAG already exists"
           else
