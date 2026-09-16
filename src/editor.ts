@@ -309,9 +309,10 @@ class TemplateEntityRowEditor extends LitElement {
     }
     .nested-panel {
       margin-top: 20px;
+      --expansion-panel-content-padding: 0;
     }
     .interactions-content {
-      padding: 0 16px 16px;
+      padding: 0 0 16px;
     }
   `;
 }

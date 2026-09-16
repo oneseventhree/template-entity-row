@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1-beta-02
+
+- Remove duplicated expansion-panel padding so the action selectors align
+  evenly inside the nested Interactions panel.
+
 ## 1.0.1-beta-01
 
 - Audit all 119 issues from the original repository and exclude feature
