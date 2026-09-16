@@ -12,6 +12,7 @@ const OPTIONS = [
   "active",
   "name",
   "secondary",
+  "secondary_multiline",
   "state",
   "condition",
   "image",
@@ -35,6 +36,7 @@ const TRIMMED_OPTIONS = new Set([
   "native_icon",
   "state_color",
   "toggle",
+  "secondary_multiline",
 ]);
 
 const LOCALIZE_PATTERN = /_\([^)]*\)/g;
@@ -56,13 +58,85 @@ function normaliseValue(key: string, value: unknown, hass: any): unknown {
   return TRIMMED_OPTIONS.has(key) ? translated.trim() : translated;
 }
 
+type TemplatePath = Array<string | number>;
+
+interface TemplateBinding {
+  path: TemplatePath;
+  template: string;
+}
+
+const OMIT_TEMPLATE = Symbol("omit-template");
+
+function collectTemplateBindings(
+  value: unknown,
+  path: TemplatePath = []
+): TemplateBinding[] {
+  if (hasTemplate(value)) {
+    return [{ path, template: value as string }];
+  }
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) =>
+      collectTemplateBindings(item, [...path, index])
+    );
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value).flatMap(([key, item]) =>
+      collectTemplateBindings(item, [...path, key])
+    );
+  }
+  return [];
+}
+
+function cloneWithoutTemplates(value: unknown): unknown | typeof OMIT_TEMPLATE {
+  if (hasTemplate(value)) return OMIT_TEMPLATE;
+  if (Array.isArray(value)) {
+    return value.map((item) => {
+      const cloned = cloneWithoutTemplates(item);
+      return cloned === OMIT_TEMPLATE ? undefined : cloned;
+    });
+  }
+  if (value && typeof value === "object") {
+    const cloned: Record<string, unknown> = {};
+    for (const [key, item] of Object.entries(value)) {
+      const next = cloneWithoutTemplates(item);
+      if (next !== OMIT_TEMPLATE) cloned[key] = next;
+    }
+    return cloned;
+  }
+  return value;
+}
+
+function setValueAtPath(
+  current: unknown,
+  path: TemplatePath,
+  value: unknown
+): unknown {
+  if (!path.length) return value;
+  const [head, ...tail] = path;
+  const container =
+    typeof head === "number"
+      ? Array.isArray(current)
+        ? [...current]
+        : []
+      : current && typeof current === "object" && !Array.isArray(current)
+        ? { ...(current as Record<string, unknown>) }
+        : {};
+  const previous = (container as any)[head];
+  (container as any)[head] = setValueAtPath(previous, tail, value);
+  return container;
+}
+
 function initialRenderedConfig(
   config: Record<string, any>
 ): Record<string, any> {
   const rendered = { ...config };
   for (const key of OPTIONS) {
-    if (hasTemplate(config[key])) {
+    if (!(key in config)) continue;
+    const initial = cloneWithoutTemplates(config[key]);
+    if (initial === OMIT_TEMPLATE) {
       delete rendered[key];
+    } else {
+      rendered[key] = initial;
     }
   }
   if (hasTemplate(config.condition)) {
@@ -173,23 +247,33 @@ class TemplateEntityRow extends LitElement {
     const hs = await getHass();
     if (generation !== this._bindGeneration || !this.isConnected) return;
 
-    const subscriptions = await Promise.all(
-      OPTIONS.map(async (key) => {
-        const source = this._sourceConfig[key];
-        if (!hasTemplate(source)) {
-          if (typeof source === "string") {
-            this._setRenderedValue(key, normaliseValue(key, source, hs));
-          }
-          return undefined;
-        }
+    const bindings = OPTIONS.flatMap((key) => {
+      const source = this._sourceConfig[key];
+      if (typeof source === "string" && !hasTemplate(source)) {
+        this._setRenderedValue(key, normaliseValue(key, source, hs));
+      }
+      return collectTemplateBindings(source).map((binding) => ({
+        key,
+        ...binding,
+      }));
+    });
 
+    const subscriptions = await Promise.all(
+      bindings.map(async ({ key, path, template }) => {
         try {
           return await subscribeTemplate(
-            source,
+            template,
             { config: this._sourceConfig },
             (value) => {
               if (generation !== this._bindGeneration) return;
-              this._setRenderedValue(key, normaliseValue(key, value, hs));
+              const normalised = normaliseValue(key, value, hs);
+              this._setRenderedPath(
+                key,
+                path,
+                path.length && typeof normalised === "string"
+                  ? normalised.trim()
+                  : normalised
+              );
             }
           );
         } catch (error) {
@@ -217,6 +301,21 @@ class TemplateEntityRow extends LitElement {
   private _setRenderedValue(key: string, value: unknown): void {
     this._renderedConfig = { ...this._renderedConfig, [key]: value };
     if (key === "condition") this._updateVisibility(value);
+  }
+
+  private _setRenderedPath(
+    key: string,
+    path: TemplatePath,
+    value: unknown
+  ): void {
+    if (!path.length) {
+      this._setRenderedValue(key, value);
+      return;
+    }
+    this._renderedConfig = {
+      ...this._renderedConfig,
+      [key]: setValueAtPath(this._renderedConfig[key], path, value),
+    };
   }
 
   private _updateVisibility(condition: unknown): void {
@@ -270,9 +369,10 @@ class TemplateEntityRow extends LitElement {
   private _actionEnabled(action: unknown, fallback = false): boolean {
     if (action === undefined) return fallback;
     if (action && typeof action === "object") {
+      const actionName = (action as Record<string, unknown>).action;
       return (
-        String((action as Record<string, unknown>).action).toLowerCase() !==
-        "none"
+        actionName !== undefined &&
+        String(actionName).trim().toLowerCase() !== "none"
       );
     }
     return String(action).trim().toLowerCase() !== "none";
@@ -306,7 +406,7 @@ class TemplateEntityRow extends LitElement {
       config.icon !== undefined ? config.icon || "no:icon" : undefined;
     const name =
       config.name ?? entity.attributes?.friendly_name ?? entity.entity_id;
-    const state = config.state ?? base?.state;
+    const hasCustomState = config.state !== undefined;
     const active = isTrue(config.active);
     const stateColor =
       config.active !== undefined
@@ -366,7 +466,14 @@ class TemplateEntityRow extends LitElement {
         >
           ${name}
           ${config.secondary !== undefined
-            ? html`<div class="secondary">${config.secondary}</div>`
+            ? html`<div
+                class=${classMap({
+                  secondary: true,
+                  multiline: isTrue(config.secondary_multiline),
+                })}
+              >
+                ${config.secondary}
+              </div>`
             : nothing}
         </div>
         <div
@@ -378,7 +485,19 @@ class TemplateEntityRow extends LitElement {
                 <ha-entity-toggle .hass=${this.hass} .stateObj=${entity}>
                 </ha-entity-toggle>
               `
-            : state}
+            : hasCustomState
+              ? config.state
+              : base
+                ? html`
+                    <state-display
+                      .hass=${this.hass}
+                      .stateObj=${base}
+                      .content=${"state"}
+                      .timeFormat=${config.time_format ?? config.format}
+                      timestamp-tooltip
+                    ></state-display>
+                  `
+                : nothing}
         </div>
       </div>
     `;
@@ -425,8 +544,13 @@ class TemplateEntityRow extends LitElement {
         text-overflow: ellipsis;
         white-space: nowrap;
       }
+      .secondary.multiline {
+        text-overflow: clip;
+        white-space: pre-line;
+      }
       .state {
         text-align: var(--float-end, right);
+        white-space: nowrap;
       }
       .pointer {
         cursor: pointer;

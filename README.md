@@ -25,6 +25,7 @@ Existing `custom:template-entity-row` YAML remains fully supported.
 | --- | --- |
 | Editing | Full visual editor inside the Home Assistant Entities card editor |
 | Templates | Multiline template inputs for all display fields without briefly showing raw Jinja while loading |
+| States | Native Home Assistant units, precision, localisation and timestamp formatting when no custom state is supplied |
 | Icons | Reliable dynamic custom icons, including `phu:`, plus native state-aware Home Assistant icons by default |
 | Weather | Choice of Home Assistant's layered weather artwork or standard icon |
 | Performance | Template subscriptions start concurrently and are safely replaced or removed when configuration changes |
@@ -166,6 +167,35 @@ name: Front door is open
 condition: "{{ is_state(config.entity, 'on') }}"
 ```
 
+### Native state formatting
+
+When `state` is omitted, the row uses Home Assistant's native state display.
+Units, configured precision, translated states and timestamps therefore match a
+standard entity row.
+
+```yaml
+type: custom:template-entity-row
+entity: sensor.garden_temperature
+name: Garden temperature
+```
+
+A custom `state` template still takes precedence.
+
+### Multiline secondary information
+
+Enable `secondary_multiline` to preserve line breaks produced by the secondary
+template.
+
+```yaml
+type: custom:template-entity-row
+entity: sensor.demo_status
+name: Demo status
+secondary: |-
+  First line
+  Second line
+secondary_multiline: true
+```
+
 ### Entity toggle
 
 Set `toggle: true` to replace the displayed state with Home Assistant's entity
@@ -203,6 +233,17 @@ tap_action: >-
   {'action': '{{ "toggle" if is_state(config.entity, "on") else "more-info" }}'}
 ```
 
+Templates may also be used inside a structured action while keeping the rest
+of the action editable through Home Assistant's action editor:
+
+```yaml
+type: custom:template-entity-row
+entity: sensor.demo_status
+tap_action:
+  action: navigate
+  navigation_path: "/lovelace/{{ states('input_select.demo_page') }}"
+```
+
 ## Visual editor
 
 Open an Entities card in Home Assistant's visual editor, then edit an existing
@@ -225,7 +266,8 @@ The collapsed **More options** panel contains, in this order:
 3. Icon appearance
 4. Visibility condition template
 5. Image template
-6. A separately collapsible **Interactions** panel
+6. Multiline secondary information
+7. A separately collapsible **Interactions** panel
 
 The Interactions panel contains tap, hold and double-tap action selectors. The
 editor preserves configuration properties it does not recognise, so switching
@@ -240,6 +282,7 @@ between visual and YAML editing does not discard advanced settings.
 | `icon` | Icon or template | None | Custom icon; overrides the native icon |
 | `state` | Text or template | Entity state | State text shown on the right |
 | `secondary` | Text or template | None | Secondary text below the name |
+| `secondary_multiline` | Boolean or template | `false` | Preserves line breaks in secondary information |
 | `color` | Colour or template | Entity state colour | Custom icon colour |
 | `state_color` | Boolean or template | `true` | Enables or disables the entity's state-aware icon colour |
 | `toggle` | Boolean or template | `false` | Replaces the state text with an entity toggle when true |
@@ -250,6 +293,7 @@ between visual and YAML editing does not discard advanced settings.
 | `tap_action` | Action or template | More info | Action performed on tap |
 | `hold_action` | Action or template | Default | Action performed on hold |
 | `double_tap_action` | Action or template | Default | Action performed on double tap |
+| `time_format` | Text | Automatic | Native timestamp display format; `format` is accepted as a legacy alias |
 
 All display options accept Home Assistant Jinja templates. Templates receive:
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0-beta-01
+
+- Use Home Assistant's native state display whenever no custom `state` is
+  configured, including units, precision, localisation and timestamp formats.
+- Render templates nested inside structured tap, hold and double-tap action
+  configurations while retaining Home Assistant's visual action editor.
+- Add optional multiline secondary information through
+  `secondary_multiline` and the visual editor.
+
 ## 1.0.1
 
 - Remove duplicated expansion-panel padding so the action selectors align

@@ -8,6 +8,7 @@ const LABELS: Record<string, string> = {
   icon: "Icon template",
   state: "State template",
   secondary: "Secondary information template",
+  secondary_multiline: "Multiline secondary information",
   image: "Image template",
   color: "Icon colour template",
   active: "Icon appearance",
@@ -92,7 +93,14 @@ class TemplateEntityRowEditor extends LitElement {
     schema.push(
       { name: "active", selector: activeSelector },
       { name: "condition", selector: templateSelector() },
-      { name: "image", selector: templateSelector() }
+      { name: "image", selector: templateSelector() },
+      {
+        name: "secondary_multiline",
+        selector:
+          typeof this._config.secondary_multiline === "string"
+            ? templateSelector()
+            : { boolean: {} },
+      }
     );
 
     return schema;
@@ -207,14 +215,18 @@ class TemplateEntityRowEditor extends LitElement {
 
   private _computeLabel = (schema: { name: string }): string => {
     if (
-      ["active", "condition", "toggle"].includes(schema.name) &&
+      ["active", "condition", "toggle", "secondary_multiline"].includes(
+        schema.name
+      ) &&
       typeof this._config[schema.name] === "string"
     ) {
       return schema.name === "active"
         ? "Active template"
         : schema.name === "toggle"
           ? "Toggle template"
-          : LABELS[schema.name];
+          : schema.name === "secondary_multiline"
+            ? "Multiline secondary template"
+            : LABELS[schema.name];
     }
     return LABELS[schema.name] ?? schema.name;
   };
