@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0-beta-02
+
+- Fix visibility templates that resolve to `true` remaining hidden because
+  Home Assistant captured the row's temporary loading state.
+- Keep conditional rows hidden while their first template result is pending
+  without setting a persistent `hidden` state on the Entities card wrapper.
+
 ## 1.1.0-beta-01
 
 - Use Home Assistant's native state display whenever no custom `state` is

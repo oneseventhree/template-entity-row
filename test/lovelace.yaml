@@ -92,6 +92,12 @@ views:
           - type: section
             label: condition
           - type: custom:template-entity-row
+            name: Always visible condition
+            condition: "{{ true }}"
+          - type: custom:template-entity-row
+            name: ERROR false condition is visible
+            condition: "{{ false }}"
+          - type: custom:template-entity-row
             entity: light.bed_light
             condition: "{{is_state('input_boolean.test', 'on')}}"
           - type: section

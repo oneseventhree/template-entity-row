@@ -139,9 +139,6 @@ function initialRenderedConfig(
       rendered[key] = initial;
     }
   }
-  if (hasTemplate(config.condition)) {
-    rendered.condition = false;
-  }
   return rendered;
 }
 
@@ -153,6 +150,7 @@ class TemplateEntityRow extends LitElement {
 
   private _subscriptions: Array<() => Promise<void>> = [];
   private _bindGeneration = 0;
+  private _conditionPending = false;
   private _lastReportedVisibility?: boolean;
   private _nativeWeatherGeneration = 0;
   private _nativeWeatherEntity?: string;
@@ -169,7 +167,9 @@ class TemplateEntityRow extends LitElement {
     }
     this._sourceConfig = { ...config };
     this._renderedConfig = initialRenderedConfig(config);
+    this._conditionPending = hasTemplate(config.condition);
     this._updateVisibility(this._renderedConfig.condition);
+    this._reportVisibility();
     void this._bindTemplates();
   }
 
@@ -300,7 +300,11 @@ class TemplateEntityRow extends LitElement {
 
   private _setRenderedValue(key: string, value: unknown): void {
     this._renderedConfig = { ...this._renderedConfig, [key]: value };
-    if (key === "condition") this._updateVisibility(value);
+    if (key === "condition") {
+      this._conditionPending = false;
+      this._updateVisibility(value);
+      this._reportVisibility();
+    }
   }
 
   private _setRenderedPath(
@@ -326,7 +330,7 @@ class TemplateEntityRow extends LitElement {
 
   private _reportVisibility(): void {
     if (!this.isConnected) return;
-    const visible = !this.hidden;
+    const visible = !this.hidden && !this._conditionPending;
     if (visible === this._lastReportedVisibility) return;
     this._lastReportedVisibility = visible;
     this.dispatchEvent(
