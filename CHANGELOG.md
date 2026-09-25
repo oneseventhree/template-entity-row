@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- Complete HACS repository validation without ignored checks.
+- Add repository topics required for discovery and default HACS inclusion.
+- No dashboard configuration or runtime behaviour changes.
+
 ## 1.1.0
 
 - Fix visibility templates that resolve to `true` remaining hidden because
