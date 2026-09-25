@@ -45,7 +45,6 @@ jobs:
         uses: hacs/action@main
         with:
           category: plugin
-          ignore: topics
 
   prerelease:
     if: github.event_name == 'push' && github.ref == 'refs/heads/development'
