@@ -45,13 +45,20 @@ class TemplateEntityRowEditor extends LitElement {
     const entitySelector = hasTemplate(this._config.entity)
       ? templateSelector()
       : { entity: {} };
+    const iconSelector = hasTemplate(this._config.icon)
+      ? templateSelector()
+      : { icon: {} };
 
     return [
       { name: "entity", selector: entitySelector },
       { name: "name", selector: templateSelector() },
       { name: "state", selector: templateSelector() },
       { name: "secondary", selector: templateSelector() },
-      { name: "icon", selector: templateSelector() },
+      {
+        name: "icon",
+        selector: iconSelector,
+        context: { icon_entity: "entity" },
+      },
       { name: "color", selector: templateSelector() },
     ];
   }

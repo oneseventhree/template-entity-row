@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.2
+
+- Use Home Assistant's native icon picker with predictive search for static
+  icons.
+- Automatically retain the multiline template editor when the icon contains a
+  Jinja template.
+- Keep support for installed custom icon sets such as `phu:`.
+
 ## 1.1.1
 
 - Complete HACS repository validation without ignored checks.

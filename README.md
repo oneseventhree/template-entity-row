@@ -273,6 +273,10 @@ The Interactions panel contains tap, hold and double-tap action selectors. The
 editor preserves configuration properties it does not recognise, so switching
 between visual and YAML editing does not discard advanced settings.
 
+Static icons use Home Assistant's native icon picker with predictive search,
+including installed custom icon sets. When the icon contains a Jinja template,
+the field automatically uses the multiline template editor instead.
+
 ## Configuration options
 
 | Option | Type | Default | Description |
