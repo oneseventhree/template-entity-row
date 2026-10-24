@@ -5,7 +5,8 @@ import { hasTemplate } from "./helpers/templates";
 const LABELS: Record<string, string> = {
   entity: "Entity",
   name: "Name template",
-  icon: "Icon template",
+  icon_mode: "Icon type",
+  icon: "Icon",
   state: "State template",
   secondary: "Secondary information template",
   secondary_multiline: "Multiline secondary information",
@@ -20,6 +21,8 @@ const LABELS: Record<string, string> = {
   double_tap_action: "Double-tap action",
 };
 
+type IconMode = "static" | "template";
+
 const templateSelector = () => ({ template: {} });
 const textSelector = (multiline = false) => ({
   text: multiline ? { multiline: true } : {},
@@ -28,6 +31,8 @@ const textSelector = (multiline = false) => ({
 class TemplateEntityRowEditor extends LitElement {
   @property({ attribute: false }) hass: any;
   @state() private _config: Record<string, any> = {};
+  @state() private _iconMode: IconMode = "static";
+  private _iconModeWasChosen = false;
   @state() private _moreOptionsExpanded = false;
   @state() private _interactionsExpanded = false;
 
@@ -38,6 +43,12 @@ class TemplateEntityRowEditor extends LitElement {
     } else if (next.condition === false) {
       next.condition = "{{ false }}";
     }
+    const matchesCurrent =
+      JSON.stringify(next) === JSON.stringify(this._config);
+    if (!this._iconModeWasChosen || !matchesCurrent) {
+      this._iconMode = hasTemplate(next.icon) ? "template" : "static";
+      this._iconModeWasChosen = false;
+    }
     this._config = next;
   }
 
@@ -45,7 +56,7 @@ class TemplateEntityRowEditor extends LitElement {
     const entitySelector = hasTemplate(this._config.entity)
       ? templateSelector()
       : { entity: {} };
-    const iconSelector = hasTemplate(this._config.icon)
+    const iconSelector = this._iconMode === "template"
       ? templateSelector()
       : { icon: {} };
 
@@ -55,12 +66,31 @@ class TemplateEntityRowEditor extends LitElement {
       { name: "state", selector: templateSelector() },
       { name: "secondary", selector: templateSelector() },
       {
+        name: "icon_mode",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: [
+              { value: "static", label: "Static icon" },
+              { value: "template", label: "Template icon" },
+            ],
+          },
+        },
+      },
+      {
         name: "icon",
         selector: iconSelector,
         context: { icon_entity: "entity" },
       },
       { name: "color", selector: templateSelector() },
     ];
+  }
+
+  private get _primaryData(): Record<string, any> {
+    return {
+      ...this._config,
+      icon_mode: this._iconMode,
+    };
   }
 
   private get _moreOptionsSchema(): any[] {
@@ -172,7 +202,7 @@ class TemplateEntityRowEditor extends LitElement {
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${this._config}
+        .data=${this._primaryData}
         .schema=${this._primarySchema}
         .computeLabel=${this._computeLabel}
         @value-changed=${this._valueChanged}
@@ -221,6 +251,9 @@ class TemplateEntityRowEditor extends LitElement {
   }
 
   private _computeLabel = (schema: { name: string }): string => {
+    if (schema.name === "icon") {
+      return this._iconMode === "template" ? "Icon template" : "Static icon";
+    }
     if (
       ["active", "condition", "toggle", "secondary_multiline"].includes(
         schema.name
@@ -274,7 +307,17 @@ class TemplateEntityRowEditor extends LitElement {
   }
 
   private _valueChanged(event: CustomEvent): void {
-    this._applyValue(event.detail.value);
+    const value = { ...event.detail.value };
+    const iconMode = value.icon_mode as IconMode | undefined;
+    delete value.icon_mode;
+
+    if (iconMode && iconMode !== this._iconMode) {
+      this._iconMode = iconMode;
+      this._iconModeWasChosen = true;
+      return;
+    }
+
+    this._applyValue(value);
   }
 
   private _applyValue(

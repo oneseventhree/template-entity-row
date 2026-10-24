@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3
+
+- Add an explicit Icon type dropdown with Static icon and Template icon choices.
+- Keep predictive Home Assistant icon search for static icons and provide the
+  multiline editor when Template icon is selected.
+- Keep the editor-only icon choice out of the saved dashboard YAML.
+
 ## 1.1.2
 
 - Use Home Assistant's native icon picker with predictive search for static
