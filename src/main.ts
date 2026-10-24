@@ -411,13 +411,17 @@ class TemplateEntityRow extends LitElement {
     const name =
       config.name ?? entity.attributes?.friendly_name ?? entity.entity_id;
     const hasCustomState = config.state !== undefined;
+    const useNativeIcon =
+      config.icon === undefined && config.image === undefined;
+    const hasCustomColor =
+      config.color !== undefined && String(config.color).trim() !== "";
     const active = isTrue(config.active);
     const stateColor =
       config.active !== undefined
         ? active
         : config.state_color !== undefined
           ? isTrue(config.state_color)
-          : true;
+          : useNativeIcon || hasCustomColor;
 
     if (active) {
       entity.attributes.brightness = 255;
@@ -427,8 +431,6 @@ class TemplateEntityRow extends LitElement {
     }
 
     const showToggle = isTrue(config.toggle) && Boolean(config.entity);
-    const useNativeIcon =
-      config.icon === undefined && config.image === undefined;
     const useNativeWeatherIcon =
       useNativeIcon &&
       typeof config.entity === "string" &&

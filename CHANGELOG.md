@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.4
+
+- Render custom icons and images with the inactive appearance by default when
+  no icon colour is configured.
+- Keep native entity icons state-aware by default.
+- Show the effective custom-icon default in the visual editor while retaining
+  an explicit Automatic option.
+
 ## 1.1.3
 
 - Add an explicit Icon type dropdown with Static icon and Template icon choices.

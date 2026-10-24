@@ -28,6 +28,10 @@ const textSelector = (multiline = false) => ({
   text: multiline ? { multiline: true } : {},
 });
 
+function isTrue(value: unknown): boolean {
+  return value === true || String(value).trim().toLowerCase() === "true";
+}
+
 class TemplateEntityRowEditor extends LitElement {
   @property({ attribute: false }) hass: any;
   @state() private _config: Record<string, any> = {};
@@ -145,21 +149,33 @@ class TemplateEntityRowEditor extends LitElement {
 
   private get _showWeatherIconStyle(): boolean {
     const entity = this._config.entity;
-    const hasCustomIcon =
-      this._config.icon !== undefined &&
-      String(this._config.icon).trim() !== "";
-    const hasCustomImage =
-      this._config.image !== undefined &&
-      String(this._config.image).trim() !== "";
 
     return (
       typeof entity === "string" &&
       !hasTemplate(entity) &&
       entity.trim().startsWith("weather.") &&
       !hasTemplate(this._config.native_icon) &&
-      !hasCustomIcon &&
-      !hasCustomImage
+      !this._hasCustomVisual
     );
+  }
+
+  private get _hasCustomVisual(): boolean {
+    return [this._config.icon, this._config.image].some(
+      (value) => value !== undefined && String(value).trim() !== ""
+    );
+  }
+
+  private get _hasCustomColor(): boolean {
+    return (
+      this._config.color !== undefined &&
+      String(this._config.color).trim() !== ""
+    );
+  }
+
+  private get _defaultIconAppearance(): "automatic" | "inactive" {
+    return this._hasCustomVisual && !this._hasCustomColor
+      ? "inactive"
+      : "automatic";
   }
 
   private get _moreOptionsData(): Record<string, any> {
@@ -169,7 +185,11 @@ class TemplateEntityRowEditor extends LitElement {
         typeof this._config.active === "string"
           ? this._config.active
           : this._config.active === undefined
-          ? "automatic"
+          ? this._config.state_color !== undefined
+            ? isTrue(this._config.state_color)
+              ? "automatic"
+              : "inactive"
+            : this._defaultIconAppearance
           : this._config.active
             ? "active"
             : "inactive",
@@ -299,6 +319,7 @@ class TemplateEntityRowEditor extends LitElement {
       if (value.active === "automatic") {
         delete value.active;
         remove.push("active");
+        value.state_color = true;
       } else {
         value.active = value.active === "active";
       }

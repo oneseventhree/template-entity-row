@@ -288,8 +288,8 @@ Jinja editor. This editor choice is not added to the saved dashboard YAML.
 | `state` | Text or template | Entity state | State text shown on the right |
 | `secondary` | Text or template | None | Secondary text below the name |
 | `secondary_multiline` | Boolean or template | `false` | Preserves line breaks in secondary information |
-| `color` | Colour or template | Entity state colour | Custom icon colour |
-| `state_color` | Boolean or template | `true` | Enables or disables the entity's state-aware icon colour |
+| `color` | Colour or template | None | Custom icon colour |
+| `state_color` | Boolean or template | Automatic | Enables or disables the entity's state-aware icon colour |
 | `toggle` | Boolean or template | `false` | Replaces the state text with an entity toggle when true |
 | `native_icon` | Boolean or template | `true` | Uses layered artwork for weather entities when true and the standard icon when false; retained for YAML compatibility |
 | `active` | Boolean or template | Automatic | Controls whether the icon uses its active appearance |
@@ -314,6 +314,11 @@ The visual editor's **Icon appearance** field has three modes:
 - **Automatic** uses the entity's state to decide whether its icon is active.
 - **Active** forces the active icon appearance.
 - **Inactive** forces the inactive icon appearance.
+
+Native entity icons use Automatic by default. A custom `icon` or `image`
+without an Icon colour template uses Inactive by default. Selecting Automatic
+stores `state_color: true`, while an explicit `active` or `state_color` setting
+always takes priority.
 
 For native weather artwork, leave `icon` and `image` empty and select **Layered
 artwork**. Select **Standard icon** for the normal Home Assistant weather glyph.
